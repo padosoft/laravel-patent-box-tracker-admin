@@ -32,11 +32,14 @@
 
 ## Stato esecuzione Macro 0 (2026-05-07)
 - Scope: bootstrap operativo completo (AGENTS/CLAUDE/agent/agents + rules + skills + plan + lesson/progress).
-- Stato: READY_FOR_PR.
+- Stato: BLOCKED_ON_PR_OPEN (gh auth required).
 - Gate locali:
   - Documenti aggiornati e coerenti nei file richiesto dall'operating system bootstrap.
   - Nessun codice applicativo modificato.
   - Nessun test backend/frontend necessario per questo subtask (documentale).
 - Azioni in corso:
-  - commit e apertura PR verso 	ask-admin-operating-system.
+  - commit completato: `85088f0`.
+  - branch remoto sincronizzato: `task-admin-operating-system`.
+  - PR non riuscito da CLI per `HTTP 401 Requires authentication` (token GitHub non autenticato in questo ambiente).
+  - PR da aprire manualmente su: `https://github.com/padosoft/laravel-patent-box-tracker-admin/compare/main...task-admin-operating-system`.
 

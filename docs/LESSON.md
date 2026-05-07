@@ -9,4 +9,5 @@
 - La lettura del pacchetto API mostra che le API v1 attuali coprono molti endpoint ma non hanno ancora uno stato/job id coerente e non hanno storage di errori/diagnostica robusta.
 - In questo ambiente locale i test PHP non partono finché non si usa il runtime Herd/PHP accessibile sul sistema; verificare su shell utente se `php -v` è disponibile, quindi ogni step `composer test` è una dipendenza esplicita del prossimo ambiente.
 - `AGENTS.md` e `agents.md` coesistono in questo clone; verificare sempre dopo il bootstrap per evitare file-case confusion.
+- Macro 0 bootstrap doc-only è stato completato e pushato (`task-admin-operating-system`), ma `gh pr create` fallisce con `HTTP 401` in questa sandbox: la PR deve essere aperta manualmente da utente autenticato.
 
