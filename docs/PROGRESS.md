@@ -43,3 +43,19 @@
   - PR non riuscito da CLI per `HTTP 401 Requires authentication` (token GitHub non autenticato in questo ambiente).
   - PR da aprire manualmente su: `https://github.com/padosoft/laravel-patent-box-tracker-admin/compare/main...task-admin-operating-system`.
 
+## Stato esecuzione Macro 1 (2026-05-07)
+
+- Repository package target: `laravel-patent-box-tracker`.
+- Branch attiva package: `task/api-foundation-hardening` (da `task/api-write-jobs`).
+- Subtask attivo: `1.1 Contratto envelope e versioning` (foundation scope).
+- Implementato:
+  - helper `src/Api/ApiResponse.php`;
+  - `HealthController` e `CapabilitiesController` con envelope `{data}`;
+  - test aggiornato `ApiHealthTest` su `data.status`/`data.version`.
+- Commit package:
+  - `f72c9a1` (slice 1.1 code)
+  - `a379455` (progresso package + blocker remoto push).
+- Stato subtask: `BLOCKED_ON_REMOTE_PUSH` (SSH `couldn't create signal pipe, Win32 error 5`).
+- Prossimo passo:
+  - ripartire dalla sezione Macro 1 Subtask 1.1 nel branch package e chiudere PR/loop quando i credenziali/SSH sono risolti.
+
