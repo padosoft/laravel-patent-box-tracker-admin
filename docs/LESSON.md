@@ -7,3 +7,4 @@
 - In assenza del file design locale, il plan deve includere un subtask dedicato all'allineamento reale dopo acquisizione del file `index.html` condiviso.
 - Gli errori nel package base (TODO su stima ore per commit e logica monolitica dei comandi) vanno risolti in backend prima della stabilizzazione dell'admin v1.
 - In questa sessione l'URL `api.anthropic.com/v1/design/...` per `index.html` non è stato recuperabile (SSL/endpoint non accessibile), quindi il lockfile/design non è stato importato.
+- Ambiente Windows case-insens: `AGENTS.md` e `agents.md` non possono coesistere; per ora uso `AGENTS.md` come file agente canonico e `agent.md` per compatibilità testuale dove richiesto.

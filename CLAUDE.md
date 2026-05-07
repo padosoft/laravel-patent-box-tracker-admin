@@ -9,7 +9,7 @@ Read these in this order before touching application code:
 5. `AGENTS.md`
 6. `.claude/skills/patent-box-admin-enterprise/SKILL.md`
 7. `.claude/skills/copilot-pr-review-loop/SKILL.md`
-8. `agents.md`
+8. `AGENTS.md` (also for `agents.md` naming on case-sensitive contexts)
 
 ## Non-Negotiable Rules
 

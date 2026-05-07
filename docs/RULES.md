@@ -5,7 +5,7 @@
 - Master plan: `docs/ENTERPRISE_PLAN.md`
 - Handoff log: `docs/PROGRESS.md`
 - Discoveries: `docs/LESSON.md`
-- Agent files: `AGENTS.md`, `CLAUDE.md`, `agents.md`
+- Agent files: `AGENTS.md`, `CLAUDE.md` (`agent.md` per compatibilità), `agents.md` quando supportato dal filesystem.
 - Skills: `.claude/skills/patent-box-admin-enterprise/SKILL.md`, `.claude/skills/copilot-pr-review-loop/SKILL.md`
 
 ## Task Completion Definition

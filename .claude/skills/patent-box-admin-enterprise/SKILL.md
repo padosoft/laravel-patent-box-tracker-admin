@@ -16,7 +16,7 @@ Read in order:
 5. `AGENTS.md`
 6. `CLAUDE.md`
 7. `agent.md` (compat)
-8. `agents.md`
+8. `AGENTS.md` (for `agents.md` naming compatibility)
 
 ## Mandatory Workflow
 
