@@ -1,352 +1,336 @@
-# Laravel Patent Box Tracker Admin Enterprise Plan (v0)
-
-## Obiettivo
-
-Costruire e portare in produzione un pannello admin Laravel 13 + React che gestisce l'intero flusso
-`laravel-patent-box-tracker` via HTTP API, con controllo completo di: validazione repository, dry-run, avvio run single/cross-repo, monitoraggio stato, ispezione commit/evidence, render PDF/JSON, verifica integrità hash-chain e download sicuro.
-
-Il piano include:
-
-- bootstrap operativo (docs/rules/skills/progress/lesson, branch flow)
-- API layer nel package `laravel-patent-box-tracker` (facoltativo e opt-in)
-- web admin panel standalone
-- test end-to-end (PHP + test frontend + Playwright)
-- loop PR/Copilot/CI vincolante
-- tag e release finale `v.x.x.x`
-
-## Stato: Deep Analysis (bug / problemi / miglioramenti)
-
-### Problemi rilevati nel package attuale (tracker)
-
-1. Nessuna API HTTP nel package
-   - Rischio: l'admin non può operare senza coupling DB.
-2. Duplicazione logica monolitica nei comandi
-   - `TrackCommand` e `CrossRepoCommand` replicano parte del percorso orchestrazione/validazione.
-   - Rischio: drift comportamentale tra CLI e API.
-3. Operazioni lunghe sync
-   - track/cross-repo/render sono comandi sincroni.
-   - Rischio: timeout/UX pessima per workflow admin.
-4. Nessun hardening per path dossier in superficie API
-   - Potenziale exposure se download non vincolato a sessione/dossier.
-5. Nessuna autorizzazione API perché layer assente.
-   - Rischio: esposizione dati sensibili.
-6. Nessun contract testing
-   - UI e API non avrebbero un contratto stabile.
-7. Calcolo costo ore semplificato come placeholder
-   - In `DossierPayloadAssembler` c'è TODO: `1.0h/commit` per commit qualificato.
-   - Impatto: stima costi potenzialmente non aderente a policy reale.
-
-### Incompletezza funzionale da chiudere nel flusso admin v1
-
-- Stato job real-time + tracking `running/pending` in modo coerente.
-- Pagine dedicate per:
-  - commit explorer con filtri robusti
-  - evidence explorer con search + collegamento commit
-  - sessione dettaglio con timeline e integrity
-  - dossier center con stato render/download.
-- Gestione errori e codifica errori domain (domain violations, cost cap, validation).
-- Scaffolding UX operativo (non landing page, no marketing hero).
-
-### Opportunità di miglioramento
-
-- Estrarre servizi condivisi tra CLI e API (azioni condivise).
-- Aggiungere endpoint capabilities per bootstrap frontend.
-- Standardizzare envelope risposta + mappa errori.
-- Hardening security by default con middleware configurabile.
-- Iniziare a usare Playwright per tutte le interazioni principali.
-
-## Riferimento design
-
-- Input richiesto: `https://api.anthropic.com/v1/design/h/qw1_j3QWGp6GqGyno3jc2Q?open_file=index.html`
-- In questa sessione non è stato possibile leggere direttamente il file design dal canale web (errore SSL/endpoint).
-- Subtask specifico nel piano prevede import e allineamento UI non appena il file viene reso disponibile localmente o come asset recuperabile.
-
-Nota operativa Git:
-
-- Nel file system locale di questo clone, la creazione di branch `task/...` può fallire. Quando ciò accade, usare alias locali coerenti (es. `task-admin-*`) nei comandi effettivi, ma mantenere nei documenti i nomi canonici con slash per coerenza metodologica.
-
-## Macro Task 1 — Bootstrap operativo e processo
-
-Branch: `task/admin-operating-system`
-
-### Subtask 1.1
-
-- Obiettivo: stabilire struttura governance, files guida e regole.
-- Implementazione:
-  - creare `AGENTS.md`, `CLAUDE.md`, `agents.md`
-  - creare `docs/RULES.md`, `docs/PROGRESS.md`, `docs/LESSON.md`, `docs/ENTERPRISE_PLAN.md`
-  - creare `.claude/skills/patent-box-admin-enterprise/SKILL.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`
-- Guardrail:
-  - controllo file diff completo
-  - aggiornamento `docs/PROGRESS.md` con stato iniziale
-- Verifica:
-  - nessun test applicativo richiesto
-
-### Subtask 1.2
-
-- Obiettivo: definire piano esecuzione e template PR/Copilot nel repo.
-- Implementazione:
-  - sezione "loop PR obbligatorio" in regole
-  - codifica regole di fallback Copilot (GraphQL).
-- Guardrail:
-  - PR template base con link a test/Copilot checklist
-- Verifica:
-  - controllo manuale coerenza con `rules`
-
-## Macro Task 2 — API Foundations (in package tracker)
-
-Branch: `task/api-enterprise-bootstrap`
-
-### Subtask 2.1 Config e enablement API
-
-- Obiettivo: API opt-in, prefix e middleware configurabili.
-- Implementazione:
-  - aggiungere sezione `api` in `config/patent-box-tracker.php` (`enabled`, `prefix`, `middleware`, `rate_limiter`, `route_name`)
-  - gate di registrazione routes in service provider
-- Guardrail:
-  - test API disabled => 404
-  - test API enabled => route risponde
-- Verifica:
-  - PHPUnit feature test
-
-### Subtask 2.2 Service provider e route bootstrap
-
-- Obiettivo: introdurre `routes/api.php` con versioning `v1`.
-- Implementazione:
-  - gruppo route `prefix`, `middleware` configurabili
-  - endpoint `GET /capabilities`, `GET /health`
-- Guardrail:
-  - no route registrate se `api.enabled=false`
-- Verifica:
-  - feature test routes
-
-### Subtask 2.3 Standard envelope e resource mappers
-
-- Obiettivo: response stable shape.
-- Implementazione:
-  - standard envelope `{data, meta, error}` o equivalente coerente
-  - mapper DTO per capabilities
-- Guardrail:
-  - test JSON schema base
-- Verifica:
-  - unit test mapper + feature snapshot
-
-## Macro Task 3 — API Read Models (consistency + osservabilità)
-
-Branch: `task/api-read-models`
-
-### Subtask 3.1 Sessions list/detail
-
-- Obiettivo: elencare e leggere sessioni con filtri.
-- Endpoint:
-  - `GET /v1/tracking-sessions`
-  - `GET /v1/tracking-sessions/{id}`
-- Guardrail:
-  - filtri: `status`, `fiscal_year`, `regime`, `from`, `to`, `search`, paginazione
-- Verifica:
-  - feature tests filtro + ordinamento + 404
-
-### Subtask 3.2 Commit explorer APIs
-
-- Obiettivo: tabella commit robusta con filtri.
-- Endpoint:
-  - `GET /v1/tracking-sessions/{id}/commits`
-- Guardrail:
-  - filtri `phase`, `ai_attribution`, `is_rd_qualified`, `author_email`, range confidence, search
-- Verifica:
-  - feature tests e payload contract
-
-### Subtask 3.3 Evidence API
-
-- Obiettivo: dettagliare evidenze con filtro.
-- Endpoint:
-  - `GET /v1/tracking-sessions/{id}/evidence`
-- Verifica:
-  - test `kind`, `slug`, `search`, paginazione
-
-### Subtask 3.4 Dossiers + Integrity
-
-- Obiettivo:
-  - `GET /v1/tracking-sessions/{id}/dossiers`
-  - `GET /v1/tracking-sessions/{id}/integrity`
-- Guardrail:
-  - verify hash-chain con modello già esistente
-- Verifica:
-  - test chain valid/fail
-
-## Macro Task 4 — API Write + Async Jobs
-
-Branch: `task/api-write-jobs`
-
-### Subtask 4.1 Service extraction
-
-- Obiettivo: evitare duplicazione logica CLI/API.
-- Implementazione:
-  - estrarre `CreateTrackingSessionAction`
-  - `RunSingleRepositoryTrackingAction`
-  - `RunCrossRepositoryTrackingAction`
-  - `RenderDossierAction`
-  - `ProjectCostAction`
-- Guardrail:
-  - output delle comandi invariato (retrocompatibilità)
-- Verifica:
-  - unit test action boundaries
+# Laravel Patent Box Tracker Enterprise Roadmap
 
-### Subtask 4.2 Repository validation + dry-run
+## Obiettivo v1
 
-- Endpoint:
-  - `POST /v1/repositories/validate`
-  - `POST /v1/tracking-sessions/dry-run`
-- Guardrail:
-  - no classifier call in dry-run
-  - commit count corretto
-- Verifica:
-  - feature tests con fake repo fixture
+Fornire un admin web Laravel 13 + React completo per `laravel-patent-box-tracker` con: discovery repository, dry-run, lanci asincroni, monitoraggio stato, ispezione commit/evidence, rendering/rendered download, verifiche integrity e UX allineata al design.
 
-### Subtask 4.3 Avvio tracking con async
+Lo stack base attuale dell'admin richiede bootstrap processuale e la roadmap qui sotto regola anche i processi di PR/Copilot/CI.
 
-- Endpoint:
-  - `POST /v1/tracking-sessions`
-  - `POST /v1/tracking-sessions/{id}/dossiers`
-- Guardrail:
-  - ritorna stato `202` e stato job
-- Verifica:
-  - test async dispatch, stato iniziale, eventuale fallback sync se queue non attiva
+---
 
-### Subtask 4.4 Job queue + status
+## Deep Analysis (Bug, problemi, miglioramenti)
 
-- Obiettivo:
-  - job class e stato sessione coerente (`pending`, `running`, `classified`, `rendered`, `failed`)
-- Verifica:
-  - test transizione stato su success/failure path
+### A. Stato API `laravel-patent-box-tracker` (repo package)
 
-## Macro Task 5 — API Security and hardening
+1. Stato job non persistente
+- `RunTrackingSessionJob` imposta `failed` solo su eccezione e non gestisce correttamente il passaggio completo di stato (`pending`/`running`/`classified`/`failed`) lato job.
+- `RenderTrackingSessionDossierJob` non registra errore esplicito e non imposta stato dossier/run.
 
-Branch: `task/api-security-hardening`
+2. Orchestrazione non idempotente/robusta
+- La sessione viene creata con stato `pending`, ma manca stato `queued` coerente.
+- Dispatch job non tracciato (`job.id` sempre null nel payload).
+- Non c'è endpoint di stato job e non è garantito un path di recovery.
 
-### Subtask 5.1 Authorization and middleware
+3. Validazione input debole
+- Validazioni ripetute in controller con `Validator` (`QueueTrackingSessionController`, `TrackingDryRunController`, `ValidateRepositoryController`, ecc.) senza FormRequest/DTO.
+- `QueueTrackingSessionController` non controlla unique constraints di repo/periodo e non sanitizza ruoli/path con policy.
+- Il controllo repo in dry-run/validate usa solo `GitProcess::isRepository` e non isola policy filesystem.
 
-- Implementazione:
-  - middleware default `auth:sanctum` o override configurabile
-  - policy stubs/documentation for host override
-- Verifica:
-  - test 401/403
+4. Calcolo e gestione costi incompleta
+- `TrackingDryRunController` richiede sempre `classifier.model`, mentre `QueueTrackingSessionController` lo rende opzionale; API incoerente per i client.
+- `projectedCost` usa guard, ma non c'è uniformità su rounding/overflow/cap policy.
 
-### Subtask 5.2 Error taxonomy + input hardening
+5. Dossier e sicurezza filesystem
+- `RenderTrackingSessionDossierJob` crea `TrackedDossier` con `path = null` senza persistere stato finale/durata.
+- Nessun endpoint di download protetto per `path` + autorizzazione per sessione.
 
-- Implementazione:
-  - request classes per endpoint scrittura
-  - mapping errori con codici standard (`validation_failed`, `repository_invalid`, `cost_cap_exceeded`, `not_found`, `conflict`)
-- Verifica:
-  - test 422/409/404/500 shape
+6. Integrity e observability
+- Endpoint integrity presente ma limitato, senza pagina job/attempt e senza envelope errore uniforme.
+- Assenza di contract tests per payloads endpoint/API shape.
 
-### Subtask 5.3 Download safety
+7. Sicurezza e policy
+- API pubblica manca policy layer (solo middleware config).
+- Nessun endpoint esplicito che esponga error taxonomy/trace id.
 
-- Implementazione:
-  - download endpoint verificando ownership session/dossier
-  - no client-supplied path
-- Verifica:
-  - test traversal/foreign-session rejection
+8. Admin repository (questo repo)
+- Mancano ancora baseline operativi applicativi per frontend e UI; ci sono solo documenti minimo-minimi.
 
-## Macro Task 6 — Admin UI foundation
+### B. Priorità funzionali mancanti
 
-Branch: `task/web-admin-foundation`
+1. endpoint di stato per run/job.
+2. Playbook completo per upload/download dossier e autorizzazioni.
+3. UI/UX amministrativa con flussi guidati (new run, validation, launch, poll, detail, integrity, render/download).
+4. test contract + Playwright per tutte le interazioni UI nuove.
 
-### Subtask 6.1 Scaffold e runtime modes
+---
 
-- Laravel 13 + React + TS + Vite + Tailwind + React Query.
-- Support same-host e remote API base.
-- Verifica:
-  - build app + smoke page load.
+## Criteri globali di accettazione
 
-### Subtask 6.2 API client typed
+Un task/subtask è chiuso solo se:
 
-- Implementare `capabilities`, `sessions`, `commits`, `evidence`, `dossiers`, `integrity`, `mutations`.
-- Verifica:
-  - unit tests client
-  - test mappatori errori (401/403/404/409/422/500).
+1. test locali obbligatori passati;
+2. PR aperta verso branch corretto;
+3. review Copilot richiesta e verificata;
+4. CI green (o attese esplicite documentate);
+5. commenti Copilot risolti;
+6. aggiornamenti su `docs/PROGRESS.md` e, se utile, `docs/LESSON.md`.
 
-### Subtask 6.3 Shell + navigazione
+Se una PR non parte per limiti GitHub/SSH/CLI, il task resta `OPEN` con stato bloccato esplicito.
 
-- Dashboard, sessioni, run nuovo, dettagli.
-- Verifica:
-  - component tests + Playwright per flusso base dashboard.
+---
 
-## Macro Task 7 — Admin UX implementation
+## Metodo operativo
 
-Branch: `task/web-admin-pipeline`
+1. Macro branch per macro task (nomi canonici con slash in piano: `task/<name>`).
+2. Subtask branch da macro branch.
+3. Implementa la singola slice.
+4. Apri PR verso macro branch con test, PR link, notes Copilot e stato locale.
+5. Richiedi Copilot.
+6. Itera fix finché CI/recensioni sono pulite.
+7. Merge subtask -> macro, poi macro -> `main`.
 
-### Subtask 7.1 New Run Wizard
+Quando l'ambiente locale blocca `task/<name>`, usare alias equivalenti e annotare la deviazione nel piano e in `PROGRESS`.
 
-- Step: identity, period, repositories (+validate), dry-run, launch.
-- Verifica:
-  - playright flow completo (desktop)
+---
 
-### Subtask 7.2 Session detail
+## Macro 0 - Operating System Bootstrap (admin repo)
 
-- timeline, metriche, commit/evidence tabs, integrity strip.
-- Verifica:
-  - playright su stato pending/running/classified
+### Obiettivo
+- Consolidare istruzioni operative, agent/skill/rules, progress/lesson e procedure PR.
 
-### Subtask 7.3 Commit explorer
+### Subtask 0.1 - Regole e onboarding
+- Aggiornare `AGENTS.md`, `CLAUDE.md`, `agent.md`, `agents.md`.
+- Aggiornare `docs/RULES.md` con criteri assoluti e guardrail Copilot.
 
-- filtri avanzati, drawer dettaglio.
-- Verifica:
-  - scenari di filtro + inspector
+**Guardrail**
+- Ogni file richiesto esiste e contiene read-order coerente.
 
-### Subtask 7.4 Evidence explorer
+### Subtask 0.2 - Skill pack
+- Aggiornare `.claude/skills/patent-box-admin-enterprise/SKILL.md`.
+- Aggiornare `.claude/skills/copilot-pr-review-loop/SKILL.md` con fallback GraphQL e verifica reviewer.
 
-- filtri + detail.
-- Verifica:
-  - scenario dettaglio evidence + link-to-commits
+**Guardrail**
+- fallback documentato testabile con esempio di comando.
 
-### Subtask 7.5 Dossier center
+### Subtask 0.3 - Piano definitivo
+- Riscrivere questa roadmap con tutti i blocchi sottotask e test.
 
-- render/download status + error states.
-- Verifica:
-  - playright render + download check
+**Guardrail**
+- Include subtask UI con Playwright e milestone release.
 
-## Macro Task 8 — Contracts + QA + release
+**Test locali**
+- Solo verifica manuale di coerenza file e grep/read; nessun test applicativo richiesto.
 
-Branch: `task/final-release`
+**Output PR**
+- PR verso `task-admin-operating-system`.
 
-### Subtask 8.1 Contract suite
+---
 
-- fixture JSON per capabilities/session/detail/commits/evidence/dossier/errore
-- verifica contract e stabilità shape.
+## Macro 1 - API Foundation Hardening (package repo)
 
-### Subtask 8.2 README wow-style + docs finale
+### Obiettivo
+- Stabilizzare le API base prima della UI.
 
-- update README completo in stile alto livello.
-- include API quickstart e flow admin.
+### Subtask 1.1 - Contratto envelope e versioning
+- Introdurre shape response standardizzato (`data`, `meta`, `error`).
+- Standardizzare codici errore (`validation_failed`, `not_found`, `conflict`, `cost_cap_exceeded`, `internal_error`).
+- Aggiornare `GET /health`, `GET /capabilities` in questo schema.
 
-### Subtask 8.3 Lessons/rules/agents consolidation
+**Guardrail**
+- test su payload keys obbligatorie, status codes, content-type.
 
-- integrare in `docs/LESSON.md`, `docs/RULES.md`, skills/agents.
+### Subtask 1.2 - Error taxonomy middleware
+- Centralizzare mapping exceptione validation/authorization/repository in helper dedicato.
 
-### Subtask 8.4 Release
+**Test**
+- feature tests per codici errori con fixture.
 
-- PR finale macro verso main
-- run test allineato
-- tag `v.x.x.x`
-- release notes e changelog
+### Subtask 1.3 - Test contract base
+- Creare test di contract per endpoint foundation.
 
-## PR Loop obbligatorio per ogni subtask e macro
+**Test locali**
+- `composer validate --strict --no-check-publish`
+- `composer test` (filtri su API foundation).
 
-1. Implementare slice.
-2. Eseguire gate locali.
-3. Aprire PR verso branch corrente.
-4. Richiedere Copilot review.
-5. Verificare richiesta reale in GitHub.
-6. Correggere commenti/CI.
-7. Riaprire ciclo.
-8. Merge subtask/macro solo dopo stato verde.
+---
 
-## Acceptance criteria globali
+## Macro 2 - Read Model API Completion (package repo)
 
-- API opt-in completa e sicura.
-- Admin operativo end-to-end:
-  - config/validate/dry-run/launch/poll/inspect/render/download/integrity.
-- Nessun coupling a internals di package.
-- Long operations async con stato osservabile.
-- CI locale e remoto verdi e Copilot review chiuso.
+### Obiettivo
+- Rifinire endpoint lettura sessioni, commit, evidence, dossier, integrity.
+
+### Subtask 2.1 - Sessions list/detail
+- Filtri robusti: `status`, `fiscal_year`, `regime`, `from`, `to`, `search`.
+- Metadata paginazione + summary.
+
+### Subtask 2.2 - Commit explorer
+- Filtri per `phase`, `is_rd_qualified`, `ai_attribution`, `rd_confidence_min/max`, `repository_path`, `search`.
+- Ordinamenti deterministici, paginazione e limiti.
+
+### Subtask 2.3 - Evidence explorer
+- Filtri per `kind`, `slug`, `path_like`, `search`.
+
+### Subtask 2.4 - Dossier list + integrity endpoint
+- list detail per dossier con stato rendere e audit metadata.
+- endpoint integrity con payload stabile + identificatori hash.
+
+### Subtask 2.5 - Performance
+- Eager loading/indicizzazione query e test per grandi dataset.
+
+**Guardrail**
+- Nessun N+1 noto; response shape stabile.
+
+**Test locali**
+- feature tests per ogni endpoint in `tests/Feature/Api`.
+
+---
+
+## Macro 3 - Write, Job Lifecycle, and State Machine (package repo)
+
+### Obiettivo
+- Completare i write APIs, validazioni, execution asynchronous e stato sessione robusto.
+
+### Subtask 3.1 - Queue APIs e DTO
+- Aggiungere FormRequest/DTO per `POST /tracking-sessions`, `/dry-run`, `/repositories/validate`, `/tracking-sessions/{id}/dossiers`.
+- Validazione path/repo duplication/rule matrix.
+
+### Subtask 3.2 - Job state machine
+- Introdurre stato intermedio coerente (`queued`), timestamp e `progress` minimo.
+- In `QueueTrackingSessionController`, riportare `job.id` reale in response.
+- In job `RunTrackingSessionJob`/`RenderTrackingSessionDossierJob`, aggiornare `TrackingSession`/`TrackedDossier` su start/fail/success con fallback transazionale.
+
+### Subtask 3.3 - Azioni condivise
+- Estrarre layer action/service per estrarre logica da command/API.
+- Aggiornare CLI path per usare action comuni.
+
+### Subtask 3.4 - Failure semantics
+- Persistere error_reason + context ridotto su `failed`.
+- Non lasciare sessioni in stato ambiguo.
+
+**Guardrail**
+- idempotenza del create/lancio per payload identici (evitare doppie sessioni non richieste).
+
+**Test locali**
+- php feature tests: dispatch, stato transizionale, recovery.
+- unit tests su action.
+
+---
+
+## Macro 4 - Security and Data Access Hardening (package repo)
+
+### Obiettivo
+- Rendere API sicura e pronta per uso multi-tenant/operator.
+
+### Subtask 4.1 - Middleware/auth config
+- Policy/middleware default for admin contexts.
+- `api.enabled` e prefix hardening.
+
+### Subtask 4.2 - Dossier access control
+- Nuovo endpoint download con autorizzazione per `tracking_session_id` + ownership.
+- Path traversal + race checks.
+
+### Subtask 4.3 - Rate limit + audit
+- Cap per endpoint sensibili (`dry-run`, `validate`, `create`).
+- Log minimi audit + request id.
+
+**Test locali**
+- endpoint 401/403/422/409 con test feature.
+- path traversal test negativo.
+
+---
+
+## Macro 5 - Admin API Client Foundation (admin repo)
+
+### Obiettivo
+- Costruire consumer API con contract stabile, tipi, store e polling stato.
+
+### Subtask 5.1 - Client typed + env
+- Integrazione config runtime base URL + token support.
+
+### Subtask 5.2 - Error adapter unificato
+- Tradurre error taxonomy in notifiche operatore.
+
+### Subtask 5.3 - Stato run + polling
+- Hook run in polling con backoff e aggiornamento UI.
+
+### Subtask 5.4 - Contratti frontend
+- Test client for shape parse/validation.
+
+**Test locali**
+- unit tests client + Playwright smoke per bootstrap/API call.
+
+---
+
+## Macro 6 - Admin UX + Design Implementation (admin repo)
+
+### Obiettivo
+- Implementare interfaccia end-to-end con design guida da `C:\Users\lopad\Downloads\patent-box-admin-panel\project\index.html` e flussi operativi.
+
+### Subtask 6.1 - Setup shell + routing admin
+- Sidebar/nav + dashboard + sessions list page.
+
+### Subtask 6.2 - Run wizard (new session)
+- Form wizard: repositories, period, tax identity, dry-run, launch.
+
+### Subtask 6.3 - Session detail & monitors
+- Timeline sessione, stato run, commit/evidence explorer, summary KPI.
+
+### Subtask 6.4 - Dossier center
+- Render trigger, stato async, download autorizzato, integrity check view.
+
+### Subtask 6.5 - Implementazione design file
+- Importare `C:\Users\lopad\Downloads\patent-box-admin-panel\project\index.html` e mappare sezione per sezione.
+- Documentare scostamenti responsabili nel commit note.
+
+**Guardrail UI/UX**
+- Nessuna landing/hero, niente elementi promozionali, layout operativo.
+
+**Playwright obbligatorio**
+- Scenario nuova run: validazione -> dry-run -> launch -> polling -> dettagli -> render.
+- Scenario filtro commit/evidence.
+- Scenario dossier render + download/error.
+
+**Test locali**
+- `npm run test`
+- `npm run build`
+- `npm run e2e`
+
+---
+
+## Macro 7 - Contracts, Docs, Release, and Tag
+
+### Obiettivo
+- Chiusura enterprise + rilascio v.x.x.x.
+
+### Subtask 7.1 - Contract suite finale
+- Fixture contract JSON per API + frontend shape assertion.
+
+### Subtask 7.2 - README wow (stile AskMyDocs)
+- Rework README nel package e admin con:
+  - architettura, capability matrix, quickstart install/config, security, troubleshooting, roadmap, API.
+
+### Subtask 7.3 - Consolidamento lesson/rules
+- Riflettere lezioni/skill/rules con aggiornamenti finali.
+
+### Subtask 7.4 - Release
+- Macro PR finale, CI/PR loop chiuso.
+- Tag `v.x.x.x` su `main` e release notes.
+
+**Guardrail**
+- Nessuna promessa non verificata nel README.
+- Release solo con tutti i loop chiusi e PR merged.
+
+---
+
+## PR Loop (obbligatorio per ogni subtask e macro)
+
+1. branch locale creato/aggiornato
+2. implementazione slice
+3. run gates
+4. aggiornamento docs `docs/PROGRESS.md`
+5. PR aperta
+6. richiesta Copilot review
+7. verifica reviewer effettivo
+8. chiusura commenti
+9. merge
+
+Se ci sono blocchi remoti persistenti, il subtask resta aperto con blocker esplicito.
+
+---
+
+## Registro dei tag target
+
+- `v1.0.0` placeholder: da definire dopo chiusura macro.
+- naming formale previsto: `v.x.x.x` (seguire semver del pacchetto).
+
+

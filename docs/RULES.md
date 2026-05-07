@@ -2,65 +2,104 @@
 
 ## Source Of Truth
 
-- Master plan: `docs/ENTERPRISE_PLAN.md`
-- Handoff log: `docs/PROGRESS.md`
-- Discoveries: `docs/LESSON.md`
-- Agent files: `AGENTS.md`, `CLAUDE.md` (`agent.md` per compatibilità), `agents.md` quando supportato dal filesystem.
+- Enterprise plan: `docs/ENTERPRISE_PLAN.md`
+- Handoff summary: `docs/PROGRESS.md`
+- Lessons: `docs/LESSON.md`
+- Runtime rules: `AGENTS.md`, `CLAUDE.md`, `agent.md`, `agents.md`
 - Skills: `.claude/skills/patent-box-admin-enterprise/SKILL.md`, `.claude/skills/copilot-pr-review-loop/SKILL.md`
 
-## Task Completion Definition
+## Scope
 
-Un task/subtask è completo solo se vale:
+- This repo delivers the operator admin layer for `laravel-patent-box-tracker`.
+- Backend package internals remain in the package repo and are consumed through documented API contracts.
+- Release policy follows the root package release cadence and release branches.
 
-1. Test locali della superficie toccata passano.
-2. PR aperta sul branch corretto (subtask→macro, macro→main).
-3. Copilot review richiesto e confermato.
-4. CI (checks visibili da GitHub) verde per quel PR.
-5. Tutti i commenti azionabili di Copilot sono risolti.
+## Task Completion Criteria (Absolute)
 
-## Copilot Request Pattern
+A task/subtask is closed only when all conditions below are true:
 
-Primary:
+1. All required local gates are green.
+2. Subtask PR is open against the correct macro branch (or macro PR against `main`).
+3. Copilot reviewer request is sent and confirmed in PR payload.
+4. All CI checks for that PR are green.
+5. No unresolved actionable Copilot comments.
+
+If remote review or CI cannot be verified in-session, the item stays open with explicit blocker notes in `docs/PROGRESS.md`.
+
+## Branch and PR Model
+
+- Macro branch: one branch per macro task.
+- Subtask branch: created from macro branch.
+- PR target: subtask PR -> macro branch; macro PR -> `main`.
+- Canonical branch names use `task/<name>`.
+- If local FS blocks slash names, document canonical naming and use local equivalent names.
+
+## Copilot Loop
+
+1. Open PR.
+2. Request Copilot via:
 
 ```bash
-gh pr edit <PR_NUMBER> --add-reviewer @copilot
+gh pr edit <PR> --add-reviewer @copilot
 ```
 
-Fallback:
+3. If that command fails (scope/resolution), use GraphQL fallback in `.claude/skills/copilot-pr-review-loop/SKILL.md`.
+4. Verify via `requested_reviewers` endpoint.
+5. Do not merge before review+CI clearance.
 
-```powershell
-$prNodeId = gh pr view <PR_NUMBER> --json id --jq .id
-$query = @'
-mutation RequestReviewsByLogin($pullRequestId: ID!, $botLogins: [String!], $union: Boolean!) {
-  requestReviewsByLogin(input: {pullRequestId: $pullRequestId, botLogins: $botLogins, union: $union}) {
-    clientMutationId
-  }
-}
-'@
-gh api graphql -f query="$query" -F pullRequestId="$prNodeId" -F botLogins[]='copilot-pull-request-reviewer[bot]' -F union=true
-gh api repos/padosoft/laravel-patent-box-tracker-admin/pulls/<PR>/requested_reviewers
+## Test Standards
+
+### API/backend-related work
+
+```bash
+composer validate --strict --no-check-publish
+composer test
 ```
 
-Do not treat REST `reviewers[]=copilot` as proof by itself.
+### Full package regression slices
 
-## Testing Rules
+- `php artisan test` equivalent commands from repo conventions.
+- Add feature tests for endpoint behavior and status transitions.
 
-- Backend/API task: `composer validate --strict --no-check-publish` and relevant PHPUnit.
-- Frontend task: `npm run test`, `npm run build`, `npm run e2e`.
-- UI/UX path changed: almeno uno scenario Playwright per interaction critica.
-- No local PR closure with green-only-local tests; remote CI check is required.
+### Admin frontend work
 
-## Design And UX Rules
+- `npm run test`
+- `npm run build`
+- `npm run e2e`
 
-- Desktop-first operational style, non-marketing.
-- Max border radius: 8px.
-- No decorative home page hero.
-- Icon-only actions require accessible label/tooltips.
-- No overflow, no text clipping at 125% and 150% zoom on main workflow screens.
+### UI/UX change guardrail
 
-## Security and Scope Rules
+If any interaction changes, add at least one Playwright scenario covering the new flow.
 
-- No direct tracker internals from this repo.
-- Do not expose file paths, secrets, or raw credentials in API or UI payloads.
-- Dossier download must always be authorized by dossier id/session ownership checks.
-- Long-running operations must use async model or explicit queueing simulation if same process.
+## Design Rule
+
+- Follow the design source from the provided admin design file once available.
+- Keep admin UI operational: dashboard, sessions, detail, run wizard, integrity/execution states.
+- No marketing landing hero.
+- Avoid hidden coupling to repository internals.
+
+## Security Rule
+
+- API base URLs, auth tokens, secrets, and raw file paths must not be exposed in logs.
+- Download actions must only resolve dossier identifiers by ownership and session context.
+- Error payloads for validation/authorization failures must be explicit and stable.
+
+## Documentation Discipline
+
+- Append reusable findings to `docs/LESSON.md`.
+- Keep `docs/PROGRESS.md` current with branch, PR, CI, and Copilot state.
+- Before macro close, fold discoveries into:
+  - `docs/RULES.md`
+  - `AGENTS.md`
+  - `CLAUDE.md`
+  - `.claude/skills/patent-box-admin-enterprise/SKILL.md`
+  - `.claude/skills/copilot-pr-review-loop/SKILL.md`
+
+## Release Rule
+
+No final merge before:
+
+- macro PR gate closure,
+- release docs refreshed,
+- tag created from `main` (`v.x.x.x`),
+- release notes drafted.

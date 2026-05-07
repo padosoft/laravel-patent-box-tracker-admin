@@ -1,6 +1,6 @@
 # Claude Instructions For Laravel Patent Box Tracker Admin
 
-Read these in this order before touching application code:
+Read these first before code work:
 
 1. `docs/PROGRESS.md`
 2. `docs/ENTERPRISE_PLAN.md`
@@ -9,25 +9,40 @@ Read these in this order before touching application code:
 5. `AGENTS.md`
 6. `.claude/skills/patent-box-admin-enterprise/SKILL.md`
 7. `.claude/skills/copilot-pr-review-loop/SKILL.md`
-8. `AGENTS.md` (also for `agents.md` naming on case-sensitive contexts)
 
 ## Non-Negotiable Rules
 
-- Use macro branches and subtask PRs.
-- Update `docs/PROGRESS.md` and `docs/LESSON.md`.
-- Request and verify Copilot review for every PR.
-- Merge only after local gates pass and CI plus Copilot must-fix comments are clean.
-- Keep this repo opt-in admin layer; never ship direct tracker table coupling.
+- Use macro/subtask branch model.
+- Update `docs/PROGRESS.md` during work and `docs/LESSON.md` for reusable learnings.
+- Request Copilot review on every PR and keep loop active until unresolved comments and CI are clean.
+- Never mark a task complete without:
+  - all local gates passing
+  - PR with requested reviewers, active CI checks, and no unresolved actionable comments
+  - merge completed.
 
-## Skills
+## Mandatory Process
 
-- `.claude/skills/patent-box-admin-enterprise/SKILL.md`
-- `.claude/skills/copilot-pr-review-loop/SKILL.md`
+1. Confirm current macro/subtask in `docs/ENTERPRISE_PLAN.md`.
+2. Implement one bounded subtask.
+3. Run required gates for scope.
+4. Update `docs/PROGRESS.md` with status/branch/PR details.
+5. Open scoped PR.
+6. Request Copilot review (primary command + GraphQL fallback if needed).
+7. Verify Copilot started before proceeding.
+8. Fix, retest, repush, repeat until clean.
+9. Merge and continue.
 
 ## Release Rule
 
-Before the final `task/final-release` PR merge:
+Final merge and release only after:
 
-- docs and API contract are aligned
-- `docs/PROGRESS.md` captures final remote blockers/closure
-- `docs/LESSON.md` includes Copilot/CI and process learnings
+- all macro subtasks closed,
+- README and API contract docs updated,
+- lessons folded back into rules/skills/AGENTS/CLAUDE.
+
+## References
+
+- `docs/RULES.md`
+- `.claude/skills/patent-box-admin-enterprise/SKILL.md`
+- `.claude/skills/copilot-pr-review-loop/SKILL.md`
+- `agent.md` and `agents.md` (compatibility naming)
