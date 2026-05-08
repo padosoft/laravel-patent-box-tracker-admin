@@ -2,6 +2,14 @@
 
 ## 2026-05-08
 
+- Stato subtask admin: `task-admin-operating-system-subtask-6.5-admin-ui` in corso.
+- Obiettivo subtask: importare base UI dal design locale `patent-box-admin-panel/project` e attivare i file sorgenti operativi (`index.html`, `app.jsx`, `shell.jsx`, `pages-*.jsx`, CSS).
+- Stato operativo:
+  - Branch: `task-admin-operating-system-subtask-6.5-admin-ui` (derivato da `task-admin-operating-system`).
+  - File UI copiati in `project/` con struttura completa (`index.html`, `styles.css`, `patentbox.css`, `*.jsx`, `uploads/` docs).
+  - PR non ancora aperto in questa fase (prima baseline UI in repo).
+  - Nessun blocker locale applicativo.
+
 - Package `laravel-patent-box-tracker` avanzato a `task/api-read-models`.
 - Consolidato Macro 2 Read APIs lato package:
   - `GET /tracking-sessions/{trackingSession}/dossiers/{dossier}` detail endpoint,
