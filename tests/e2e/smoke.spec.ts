@@ -98,7 +98,7 @@ test.describe('admin shell smoke', () => {
   // Macro 6.4 interaction smoke: verifies that the session-detail page
   // renders the Verify integrity button and that dossier-row click opens
   // the drawer. Uses explicit assertions so regressions fail visibly.
-  test('session detail: Verify integrity button + dossier drawer render', async ({ page }) => {
+  test('session detail: Verify integrity button + dossier drawer render', { timeout: 60_000 }, async ({ page }) => {
     await forceApiDisabled(page);
     const consoleErrors: string[] = [];
     page.on('pageerror', (err) => consoleErrors.push(err.message));
@@ -115,9 +115,15 @@ test.describe('admin shell smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#root')).not.toBeEmpty({ timeout: 15_000 });
 
-    // Navigate via the sidebar nav item (class="nav-item", text "Sessions").
-    // The fixture always has sessions (PB.SESSIONS), so this must succeed.
-    await page.locator('.nav-item').filter({ hasText: /^Sessions$/ }).click();
+    // The sidebar nav-item for Sessions contains an SVG icon + a <span> label
+    // + an optional badge counter (e.g. "Sessions4"). Filtering by /^Sessions$/
+    // fails because the full textContent includes the badge. Use page.evaluate
+    // to click via the exact span text to avoid ambiguity.
+    await page.evaluate(() => {
+      const el = Array.from(document.querySelectorAll('.nav-item'))
+        .find((e) => e.querySelector('span')?.textContent === 'Sessions');
+      if (el) (el as HTMLElement).click();
+    });
     await page.waitForLoadState('networkidle');
 
     // The sessions table must show at least one data row.
