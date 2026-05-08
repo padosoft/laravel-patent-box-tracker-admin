@@ -37,20 +37,43 @@ if (missing.length > 0) {
 }
 
 const apiClient = readFileSync(join(repoRoot, 'project/api-client.jsx'), 'utf8');
+
+// Endpoint coverage: each entry is matched against an actual request(...) /
+// fetch / template-literal call in api-client.jsx, NOT a free-text substring.
+// Without the trailing-character check, a shorter path like '/tracking-sessions'
+// would match inside a longer one (e.g. '/tracking-sessions/dry-run') and the
+// gate would silently pass even if real coverage regressed.
 const expectedEndpoints = [
-  '/health',
-  '/capabilities',
-  '/repositories/validate',
-  '/tracking-sessions/dry-run',
-  '/tracking-sessions',
-  '/integrity',
-  '/dossiers',
+  { path: '/health', terminal: true },
+  { path: '/capabilities', terminal: true },
+  { path: '/repositories/validate', terminal: true },
+  { path: '/tracking-sessions/dry-run', terminal: true },
+  // /tracking-sessions is followed by either a quote/backtick (list/create call)
+  // or by a template-literal interpolation (`${id}`); both are accepted.
+  { path: '/tracking-sessions', terminal: false },
+  // /integrity and /dossiers always appear after a template interpolation, so
+  // they are matched as standalone segments.
+  { path: '/integrity', terminal: true },
+  { path: '/dossiers', terminal: false },
 ];
-const missingEndpoints = expectedEndpoints.filter((ep) => !apiClient.includes(ep));
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const missingEndpoints = expectedEndpoints.filter(({ path, terminal }) => {
+  const escaped = escapeRegex(path);
+  // Accept the endpoint when followed by a string-terminator (quote/backtick),
+  // a path separator, a query-string '?' or a template-literal '${...}'.
+  // Terminal-only endpoints (e.g. /health) are stricter — they must be at the
+  // end of the URL string in the source code.
+  const tail = terminal ? `(?=['"\`?])` : `(?=['"\`?]|/|\\$\\{)`;
+  return !new RegExp(escaped + tail).test(apiClient);
+});
 if (missingEndpoints.length > 0) {
   console.error('structure-check: api-client.jsx is missing references to:');
-  for (const ep of missingEndpoints) {
-    console.error('  - ' + ep);
+  for (const { path } of missingEndpoints) {
+    console.error('  - ' + path);
   }
   process.exit(1);
 }

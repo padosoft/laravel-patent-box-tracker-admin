@@ -8,11 +8,19 @@ test.describe('admin shell smoke', () => {
       if (msg.type() !== 'error') {
         return;
       }
+      // Suppress only the favicon 404 — the static prototype intentionally
+      // does not ship one. Match on msg.location().url (the resource URL
+      // Chromium attached to the failed-load message) rather than the free
+      // text, which is not guaranteed to contain the URL across versions.
+      const locationUrl = msg.location()?.url ?? '';
+      if (/\/favicon\.ico(?:[?#].*)?$/i.test(locationUrl)) {
+        return;
+      }
+      // As a belt-and-braces guard for older Chromium builds whose console
+      // entries omit `location.url`, also accept the favicon path inside the
+      // raw text — but only that specific resource, never a generic 404.
       const text = msg.text();
-      // Only suppress the favicon 404 — the static prototype intentionally
-      // does not ship one. Any other 404 is a real regression (missing JSX
-      // file, missing CSS, missing image) and must surface as a failure.
-      if (/favicon\.ico/i.test(text)) {
+      if (locationUrl === '' && /\/favicon\.ico\b/i.test(text)) {
         return;
       }
       consoleErrors.push(text);

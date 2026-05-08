@@ -61,8 +61,12 @@ const server = createServer(async (req, res) => {
     });
     res.end(body);
   } catch (err) {
+    // Log full error server-side; respond with a generic 500 body so we never
+    // leak absolute filesystem paths, stack frames or internal detail to the
+    // browser.
+    console.error('serve: unhandled error', err);
     res.writeHead(500);
-    res.end('error: ' + (err && err.message ? err.message : 'unknown'));
+    res.end('internal server error');
   }
 });
 
