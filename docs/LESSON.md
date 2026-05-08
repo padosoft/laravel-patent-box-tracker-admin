@@ -1,5 +1,12 @@
 # LESSON
 
+## 2026-05-08 (allineamento upstream + README WOW)
+
+- Quando il package upstream taglia una stable (`v1.0.0`/`v1.0.1`), il primo passo è confrontare `routes/api.php` upstream con `project/api-client.jsx`: se gli endpoint coincidono e l'error taxonomy è congelata, l'admin non richiede modifica funzionale, solo documentale.
+- L'alias `invalid_repository → validation_failed` deve restare nel client per la transizione da `v0.1.x` a `v1.0.x`: rimuoverlo è una breaking change anche per l'admin, non solo per il package.
+- README admin "wow community" deve dichiarare esplicitamente: (a) ruolo di companion del package, (b) consumo solo via API pubblica, (c) presenza vibe-coding pack `.claude/skills/`, (d) badge stack + companion. Senza questi quattro elementi il lettore non capisce che è un *pannello*, non un fork del package.
+- La roadmap è "completa" anche con gap UX residui solo se i gap sono espliciti in `ENTERPRISE_PLAN.md` con riferimento al subtask di follow-up. Marcare 100% senza gap visibili crea debito invisibile.
+
 ## 2026-05-08
 
 - In questo ciclo, `gh pr list` è stato usato per verificare stato reale PR aperte; dove nulla risulta aperto, il macro può essere marcato come chiuso anche se i test frontend non sono eseguibili localmente.

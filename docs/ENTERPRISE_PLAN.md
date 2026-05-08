@@ -333,4 +333,33 @@ Se ci sono blocchi remoti persistenti, il subtask resta aperto con blocker espli
 - `v1.0.0` placeholder: da definire dopo chiusura macro.
 - naming formale previsto: `v.x.x.x` (seguire semver del pacchetto).
 
+---
+
+## Stato roadmap (snapshot 2026-05-08)
+
+| Macro | Scope | Stato |
+|-------|-------|-------|
+| 0 | Operating system bootstrap (admin repo) | ✅ Done — docs, agents, skills, rules in place; merged via PR #2 |
+| 1 | API foundation hardening (package repo) | ✅ Done upstream — envelope, error taxonomy, contract tests shipped in `v1.0.0` |
+| 2 | Read model API completion (package repo) | ✅ Done upstream — list/detail + filters, integrity endpoint shipped |
+| 3 | Write/job lifecycle + state machine (package repo) | ✅ Done upstream — queue APIs + job state shipped |
+| 4 | Security and data access hardening (package repo) | ✅ Done upstream — token gate + rate limiter + scoped download in `v1.0.0` / patched in `v1.0.1` |
+| 5 | Admin API client foundation (admin repo) | ✅ Done — `project/api-client.jsx` covers full v1 surface, error alias, bearer support |
+| 6 | Admin UX + design implementation (admin repo) | 🟡 Mostly done — Macro 6.1–6.3 shipped via PR #1/#2; Macro 6.4 integrity check button + dossier detail panel are tracked as polish gaps |
+| 7 | Contracts, docs, release, tag (admin repo) | 🟡 In progress — README rewrite this session; final tag pending Playwright pipeline + CI |
+
+### Macro 6 polish gaps (carry-over)
+
+- **6.4a** integrity check action: `TrackerApi.verifySessionIntegrity` is wired in the client but not yet bound to a button on the session detail page.
+- **6.4b** dossier detail drawer: `TrackerApi.getDossier` exists; UI uses only `downloadUrl`. Add a side drawer with metadata + sha256 once Playwright pipeline lands.
+
+These can ship as a follow-up subtask `task-admin-integrity-and-dossier-detail` against `main`.
+
+### Macro 7 outstanding
+
+- 7.1 contract suite frontend: blocked locally — no `npm`/Playwright in this workspace; must be added in CI before cutting `v1.0.0` admin tag.
+- 7.2 README wow rewrite: ✅ delivered in this session.
+- 7.3 lessons/skills consolidation: ✅ refreshed this session (upstream version pin, endpoint surface, error taxonomy mirrored into `RULES.md` and the enterprise skill).
+- 7.4 tag/release: pending CI + Macro 6 polish gaps.
+
 

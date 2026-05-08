@@ -14,6 +14,15 @@
 - Backend package internals remain in the package repo and are consumed through documented API contracts.
 - Release policy follows the root package release cadence and release branches.
 
+## Upstream Package Pin
+
+- Track stable cut: **`padosoft/laravel-patent-box-tracker` v1.0.1**.
+- API base contract: `/api/patent-box/v1/...` with `{data, meta?, error?}` envelope.
+- Frozen error taxonomy: `validation_failed`, `not_found`, `conflict`,
+  `cost_cap_exceeded`, `internal_error`.
+- Any new admin feature MUST be expressible against the public v1 surface.
+  Never reach into package internals or private migrations from this repo.
+
 ## Task Completion Criteria (Absolute)
 
 A task/subtask is closed only when all conditions below are true:

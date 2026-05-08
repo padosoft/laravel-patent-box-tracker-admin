@@ -1,5 +1,21 @@
 # PROGRESS
 
+## 2026-05-08 (sync con package v1.0.1 + README WOW)
+
+- Audit upstream `padosoft/laravel-patent-box-tracker`:
+  - ultimo tag pubblico = `v1.0.1` (security patch su `spatie/browsershot` ^5.0.5);
+  - `v1.0.0` ha congelato la HTTP API v1 (envelope `{data, meta?, error}`, error taxonomy fissa, token gate, rate limiter) e ha introdotto il rename `error.code` `invalid_repository` → `validation_failed` su `POST /v1/repositories/validate`.
+- Allineamento admin → package:
+  - `project/api-client.jsx` copre già **tutti** gli endpoint v1 (health, capabilities, repositories/validate, dry-run, sessions list/show, commits/evidence/dossiers list, dossier detail, download, integrity, queue render);
+  - alias `invalid_repository` → `validation_failed` è già normalizzato lato client → conforme al contract di `v1.0.0`+;
+  - bearer auth + timeout + storage config supportati;
+  - **gap UX residui** documentati in `docs/ENTERPRISE_PLAN.md` (Macro 6.4a integrity-check button, 6.4b dossier detail drawer).
+- Skills/Rules:
+  - `.claude/skills/patent-box-admin-enterprise/SKILL.md` aggiornato con sezione "Upstream Package Contract" + endpoint surface v1;
+  - `docs/RULES.md` aggiornato con pin esplicito su `v1.0.1` e taxonomy congelata.
+- Roadmap: stato consolidato in tabella in `docs/ENTERPRISE_PLAN.md` (Macro 0–5 ✅, Macro 6 🟡 con 2 gap di polish, Macro 7 🟡 con README ✅, lessons ✅, CI/tag pending).
+- README: riscritto in stile WOW community con badge, TOC, sezione vibe-coding, ruolo come pannello admin del package, install + quick start.
+
 ## 2026-05-08
 
 - Stato roadmap admin: completate Macro 5 (API client foundation) e Macro 6 (UX design + run/detail interactions) in stato operativo locale.
