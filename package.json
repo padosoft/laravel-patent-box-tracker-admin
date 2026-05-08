@@ -1,0 +1,16 @@
+{
+  "name": "laravel-patent-box-tracker-admin",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Admin web panel companion for padosoft/laravel-patent-box-tracker. Static React 18 + JSX prototype consuming the public HTTP API v1.",
+  "scripts": {
+    "test": "node scripts/structure-check.mjs",
+    "build": "node scripts/structure-check.mjs",
+    "serve": "node scripts/serve.mjs",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.59.1"
+  }
+}

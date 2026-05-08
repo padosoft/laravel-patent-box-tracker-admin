@@ -14,6 +14,15 @@
 - Backend package internals remain in the package repo and are consumed through documented API contracts.
 - Release policy follows the root package release cadence and release branches.
 
+## Upstream Package Pin
+
+- Track stable cut: **`padosoft/laravel-patent-box-tracker` v1.0.1**.
+- API base contract: `/api/patent-box/v1/...` with `{data, meta?, error?}` envelope.
+- Frozen error taxonomy: `validation_failed`, `not_found`, `conflict`,
+  `cost_cap_exceeded`, `internal_error`.
+- Any new admin feature MUST be expressible against the public v1 surface.
+  Never reach into package internals or private migrations from this repo.
+
 ## Task Completion Criteria (Absolute)
 
 A task/subtask is closed only when all conditions below are true:
@@ -44,8 +53,15 @@ gh pr edit <PR> --add-reviewer @copilot
 ```
 
 3. If that command fails (scope/resolution), use GraphQL fallback in `.claude/skills/copilot-pr-review-loop/SKILL.md`.
-4. Verify via `requested_reviewers` endpoint.
+4. Verify via `requested_reviewers` REST endpoint (NOT GraphQL `reviewRequests`).
 5. Do not merge before review+CI clearance.
+
+### Wait discipline (mandatory)
+
+- A background monitor is a helper, not a guarantee. After re-requesting Copilot following a fix push, ALWAYS cross-check the review state by REST every 5–10 minutes of conversation activity. The exact query is in `.claude/skills/copilot-pr-review-loop/SKILL.md`.
+- **Soft cap: 15 minutes** after the most recent re-request — if Copilot has not submitted, run the REST query, do not assume "still in flight".
+- **Hard cap: 30 minutes** — escalate to the user, run the REST query, decide between re-request or proceeding with merge per explicit user authorisation.
+- When the user pings asking "what's happening?", treat it as a forced manual-check trigger: run the REST query before answering, do not summarise from the last monitor event.
 
 ## Test Standards
 

@@ -1,6 +1,35 @@
 # PROGRESS
 
-## 2026-05-08
+## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline)
+
+- Branch: `task-admin-readme-and-ci` su `main`.
+- PR aperta: https://github.com/padosoft/laravel-patent-box-tracker-admin/pull/3
+- Commit:
+  - `3574174` — community README + screenshots + Playwright smoke + CI workflow + CHANGELOG + skill/RULES pin upstream v1.0.1.
+  - `7fb49f6` — `package-lock.json` per sbloccare `actions/setup-node` cache.
+- CI: ✅ entrambi green (Structure check 7s + Playwright smoke 50s) sul run `25549929711`.
+- Review:
+  - `chatgpt-codex-connector[bot]` ha aperto un P1 (npm cache senza lockfile) → risolto da `7fb49f6` e replicato come commento su PR.
+  - `Copilot` (`copilot-pull-request-reviewer[bot]`) presente in `requested_reviewers` (verificato via REST `/requested_reviewers`); review in attesa.
+- Stato loop: PR aperta, CI green, Copilot richiesto e in attesa → no merge fino a review.
+
+## 2026-05-08 (sync con package v1.0.1 + README WOW)
+
+- Audit upstream `padosoft/laravel-patent-box-tracker`:
+  - ultimo tag pubblico = `v1.0.1` (security patch su `spatie/browsershot` ^5.0.5);
+  - `v1.0.0` ha congelato la HTTP API v1 (envelope `{data, meta?, error}`, error taxonomy fissa, token gate, rate limiter) e ha introdotto il rename `error.code` `invalid_repository` → `validation_failed` su `POST /v1/repositories/validate`.
+- Allineamento admin → package:
+  - `project/api-client.jsx` copre già **tutti** gli endpoint v1 (health, capabilities, repositories/validate, dry-run, sessions list/show, commits/evidence/dossiers list, dossier detail, download, integrity, queue render);
+  - alias `invalid_repository` → `validation_failed` è già normalizzato lato client → conforme al contract di `v1.0.0`+;
+  - bearer auth + timeout + storage config supportati;
+  - **gap UX residui** documentati in `docs/ENTERPRISE_PLAN.md` (Macro 6.4a integrity-check button, 6.4b dossier detail drawer).
+- Skills/Rules:
+  - `.claude/skills/patent-box-admin-enterprise/SKILL.md` aggiornato con sezione "Upstream Package Contract" + endpoint surface v1;
+  - `docs/RULES.md` aggiornato con pin esplicito su `v1.0.1` e taxonomy congelata.
+- Roadmap: stato consolidato in tabella in `docs/ENTERPRISE_PLAN.md` (Macro 0–5 ✅, Macro 6 🟡 con 2 gap di polish, Macro 7 🟡 con README ✅, lessons ✅, CI/tag pending).
+- README: riscritto in stile WOW community con badge, TOC, sezione vibe-coding, ruolo come pannello admin del package, install + quick start.
+
+## 2026-05-08 (chiusura locale Macro 5+6)
 
 - Stato roadmap admin: completate Macro 5 (API client foundation) e Macro 6 (UX design + run/detail interactions) in stato operativo locale.
 - Stato subtask:
@@ -19,7 +48,7 @@
 - Note finali:
   - nessun blocker operativo immediato; la roadmap si considera pronta per chiusura con i limiti locali (mancanza strumenti frontend) annotati.
 
-## 2026-05-08
+## 2026-05-08 (introduzione API client)
 
 - Stato operativo locale su admin:
   - `project/api-client.jsx` introdotto e allineato ai parametri API base (`/api/patent-box/v1`), con normalizzazione sessione, commit, evidence, dossier e detail payload.
@@ -33,7 +62,7 @@
   - nessun test automatizzato frontend disponibile in questo workspace (`npm`/playwright non presenti).
   - i passaggi PR/Copilot/CI restano da eseguire nel prossimo loop remoto.
 
-## 2026-05-08
+## 2026-05-08 (merge PR #1/#2 su main)
 
 - Stato admin aggiornato su `main`:
   - PR #1 (`task-admin-operating-system-subtask-6.5-admin-ui` -> `task-admin-operating-system`) mergeata.
@@ -45,7 +74,7 @@
 - Copilot:
   - richiesta valida su PR #2 confermata.
 
-## 2026-05-08
+## 2026-05-08 (subtask 6.5 admin UI baseline)
 
 - Stato subtask admin: `task-admin-operating-system-subtask-6.5-admin-ui` in corso.
 - Obiettivo subtask: importare base UI dal design locale `patent-box-admin-panel/project` e attivare i file sorgenti operativi (`index.html`, `app.jsx`, `shell.jsx`, `pages-*.jsx`, CSS).
