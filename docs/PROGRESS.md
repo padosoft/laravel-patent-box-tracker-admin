@@ -1,13 +1,13 @@
 # PROGRESS
 
-## 2026-05-08 (PR #3 MERGED + auto-merge rule)
+## 2026-05-08 (PR #3 mergeata + nuova regola di auto-merge)
 
-- **PR #3 merged** in `b77e8ed` (squash + delete-branch) dopo 7 round di review Copilot, 22 commenti applicati, 7ª review con `0 inline comments` e body `"generated no new comments"`. CI verde su `3bde31c` (Structure check 5s + Playwright smoke 44s). `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
-- Branch `task-admin-readme-and-ci` eliminato.
-- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md`, `.claude/skills/copilot-pr-review-loop/SKILL.md`:
-  - quando local gates ✅ + CI all SUCCESS + Copilot ultima review 0 inline + mergeable CLEAN, **merge automatico senza chiedere**;
-  - bypass espliciti documentati (secrets/infra/destructive ops, "wait" dell'utente, base ≠ main);
-  - logging del merge in PROGRESS è obbligatorio per audit trail.
+- **PR #3 mergeata** in `b77e8ed` (squash + branch eliminato) dopo 7 giri di review Copilot e 22 commenti applicati. La 7ª review è arrivata con zero commenti inline e body `"generated no new comments"`. CI completamente verde su `3bde31c` (Structure check 5s + Playwright smoke 44s); stato `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
+- Branch `task-admin-readme-and-ci` rimosso dopo il merge.
+- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`:
+  - se i gate locali passano, tutti i check CI sono `pass`, l'ultima review Copilot ha zero commenti inline (oppure è in stato `APPROVED`) e la PR risulta `MERGEABLE` + `CLEAN`, il merge parte automaticamente senza chiedere conferma;
+  - i bypass sono enumerati esplicitamente: PR che toccano segreti/infra/azioni distruttive, richieste esplicite di attendere da parte dell'utente, base diversa da `main`;
+  - resta obbligatorio annotare il commit di merge in `docs/PROGRESS.md` per mantenere l'audit trail.
 
 ## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline)
 

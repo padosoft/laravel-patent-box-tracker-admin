@@ -123,22 +123,58 @@ node scripts/structure-check.mjs
 echo "=== CI ==="
 gh pr checks $PR --repo $REPO
 echo "=== latest Copilot review ==="
-LATEST=$(gh api "repos/$REPO/pulls/$PR/reviews" --jq '[.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last')
-echo "$LATEST" | jq '{state, body, id, submitted_at}'
-COPILOT_COMMENTS=$(echo "$LATEST" | jq -r '.id' | xargs -I{} gh api "repos/$REPO/pulls/$PR/comments?per_page=100" --jq '[.[] | select(.pull_request_review_id=={})] | length')
+LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
+  --jq '[.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last // empty')
+if [ -z "$LATEST" ]; then
+  echo "[gate] no Copilot review yet — convergence NOT reached"
+  COPILOT_COMMENTS="unknown"
+  COPILOT_STATE="absent"
+  COPILOT_BODY=""
+else
+  echo "$LATEST" | jq '{state, body, id, submitted_at}'
+  REVIEW_ID=$(echo "$LATEST" | jq -r '.id')
+  COPILOT_STATE=$(echo "$LATEST" | jq -r '.state')
+  COPILOT_BODY=$(echo "$LATEST" | jq -r '.body // ""')
+  # --paginate handles PRs with >100 review comments. The double quoting on
+  # the jq filter is required because the review id is interpolated.
+  COPILOT_COMMENTS=$(gh api --paginate "repos/$REPO/pulls/$PR/comments" \
+    --jq "[.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
+fi
 echo "Copilot inline comments on latest review: $COPILOT_COMMENTS"
+echo "Copilot review state: $COPILOT_STATE"
 echo "=== mergeability ==="
 gh pr view $PR --repo $REPO --json mergeable,mergeStateStatus,headRefOid
 ```
 
-When `$COPILOT_COMMENTS` is `0`, CI is all `pass`, mergeable is `MERGEABLE`, mergeStateStatus is `CLEAN`, and local gates pass — proceed straight to the squash merge.
+Convergence is reached **only when ALL of these hold simultaneously**:
+
+- local gates pass;
+- every `gh pr checks` row is `pass`;
+- `gh pr view --json mergeable,mergeStateStatus` reports `mergeable=MERGEABLE` AND `mergeStateStatus=CLEAN`;
+- the Copilot quiet/approval signal — at least one of the following:
+  - `COPILOT_STATE=APPROVED`, OR
+  - `COPILOT_COMMENTS=0` AND `$COPILOT_BODY` matches the "no new comments" sentinel (e.g. `grep -q "no new comments" <<<"$COPILOT_BODY"` returns true).
+
+A bare `COPILOT_COMMENTS=0` is **not** sufficient — Copilot can submit a `COMMENTED` review with zero inline comments while still leaving substantive feedback in the body, or it can post a review where the inline comments arrive in a follow-up event. Always inspect both the inline count and the body/state.
 
 ## Auto-merge command (default path)
 
+Run this only after the convergence checks above have all passed — including the explicit body/approval signal, not just `COPILOT_COMMENTS == 0`. Treat the merge command as the final action of the convergence detector, not a shortcut.
+
 ```bash
-gh pr merge <PR> --repo <owner/repo> --squash --delete-branch \
-  --subject "<short PR title> (#<PR>)" \
-  --body "<one-paragraph summary + 'Review trail: N rounds, M comments, final 0/CLEAN'>"
+# Final guard before merge — re-evaluate every condition as one expression.
+if [ "$LOCAL_GATES_OK" = "1" ] \
+   && [ "$CI_ALL_PASS" = "1" ] \
+   && [ "$MERGEABLE" = "MERGEABLE" ] \
+   && [ "$MERGE_STATE" = "CLEAN" ] \
+   && { [ "$COPILOT_STATE" = "APPROVED" ] \
+        || { [ "$COPILOT_COMMENTS" = "0" ] && grep -q "no new comments" <<<"$COPILOT_BODY"; }; }; then
+  gh pr merge "$PR" --repo "$REPO" --squash --delete-branch \
+    --subject "<short PR title> (#<PR>)" \
+    --body "<one-paragraph summary + 'Review trail: N rounds, M comments, final 0/CLEAN'>"
+else
+  echo "[gate] convergence not reached — do not merge"
+fi
 ```
 
 After the merge:

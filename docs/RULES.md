@@ -61,9 +61,9 @@ gh pr edit <PR> --add-reviewer @copilot
 **If ALL of the following are true, MERGE WITHOUT ASKING and continue with the next task:**
 
 1. Local gates pass on the latest pushed commit (e.g. `node scripts/structure-check.mjs`, `composer test`, etc.).
-2. **All** CI checks on the PR head commit are `SUCCESS` (no `pending`, no `failure`, no required-but-skipped).
-3. The latest Copilot review has **0 inline review comments** AND its body indicates no new comments (e.g. "generated no new comments"), OR Copilot has approved the PR.
-4. The PR's REST `mergeable` field is `MERGEABLE` and `mergeStateStatus` is `CLEAN`.
+2. **All** CI checks on the PR head commit are passing — `gh pr checks <PR>` reports each row as `pass` (no `pending`, no `fail`, no required-but-`skipping`). Equivalent JSON state via `gh pr view --json statusCheckRollup` is `conclusion: "SUCCESS"`.
+3. The latest Copilot review has **0 inline review comments** AND its body indicates no new comments (e.g. "generated no new comments"), OR Copilot has explicitly approved the PR (review state `APPROVED`).
+4. The PR is mergeable. Use `gh pr view <PR> --json mergeable,mergeStateStatus` (which surfaces GitHub's GraphQL fields) and require `mergeable=MERGEABLE` and `mergeStateStatus=CLEAN`. The REST endpoint exposes the same signal under different names (`mergeable: true` and `mergeable_state: "clean"`); pick one API and match the field names to it.
 
 When all four are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorisation.
 
