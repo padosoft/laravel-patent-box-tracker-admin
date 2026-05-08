@@ -237,14 +237,26 @@ php -S 127.0.0.1:8001 -t project
 
 Then point your browser at `http://127.0.0.1:8001/?apiBase=https://your-tracker.example/api/patent-box`.
 
-### Option B — Laravel host integration (planned, Macro 7)
+### Option B — Laravel host integration (Composer)
 
 ```bash
 composer require padosoft/laravel-patent-box-tracker-admin
 php artisan vendor:publish --tag=patent-box-admin-assets
 ```
 
-The Composer install path is reserved by the [Macro 7 release plan](docs/ENTERPRISE_PLAN.md) — track progress in [`docs/PROGRESS.md`](docs/PROGRESS.md).
+Assets are published to:
+
+```text
+public/vendor/patent-box-admin
+```
+
+Then mount it from Laravel, for example:
+
+```php
+Route::view('/patent-box-admin', 'patent-box-admin-shell');
+```
+
+with a blade shell that points scripts/styles to `/vendor/patent-box-admin/*`.
 
 ## Quick start
 
@@ -428,16 +440,14 @@ The macro/subtask plan is in [`docs/ENTERPRISE_PLAN.md`](docs/ENTERPRISE_PLAN.md
 | 0 | Operating-system bootstrap (this repo) | ✅ Done |
 | 1–4 | API foundation / read / write / security (tracker) | ✅ Done upstream in `v1.0.0` / `v1.0.1` |
 | 5 | Admin API client foundation | ✅ Done — full v1 surface in `project/api-client.jsx` |
-| 6 | Admin UX + design implementation | 🟡 Done with two polish gaps (integrity-check button, dossier detail drawer) |
-| 7 | Contracts, docs, release, tag | 🟡 README ✅, lessons ✅, CI + Composer install path + Playwright pipeline + tag pending |
+| 6 | Admin UX + design implementation | ✅ Done |
+| 7 | Contracts, docs, release, tag | ✅ Done (`v1.0.0`) |
 
-What's next, in order:
+Current milestone:
 
-1. wire the **Verify integrity** button on the session detail page (`TrackerApi.verifySessionIntegrity` is already in the client);
-2. add the **Dossier detail drawer** (`TrackerApi.getDossier` is already in the client);
-3. land a real **Vite build + Playwright pipeline** so the gate matrix can run in CI;
-4. ship the **Composer install path** so the panel mounts inside any Laravel 12 / 13 host;
-5. cut **`v1.0.0`** of the admin and pin its tracker compatibility floor at `>= v1.0.1`.
+1. Macro 0–7 completed.
+2. Admin `v1.0.0` released with Composer install path (`vendor:publish --tag=patent-box-admin-assets`).
+3. Tracker compatibility floor remains `>= v1.0.1`.
 
 ## Contributing
 

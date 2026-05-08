@@ -23,12 +23,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - No code changes to `project/*.jsx` were required: the existing API client already covers the full `v1.0.1` surface, including the `invalid_repository → validation_failed` legacy alias and bearer-token support.
 - Two UX polish gaps remain explicitly tracked in `docs/ENTERPRISE_PLAN.md`: integrity-check button binding and dossier detail drawer.
 
-## Tag candidate
+## [1.0.0] - 2026-05-09
 
-A `v1.0.0` tag will be cut once:
+### Added
 
-1. CI is green on `main` (structure check + Playwright smoke);
-2. the two Macro 6.4 polish gaps are landed (integrity button + dossier drawer);
-3. release notes are signed off and a Composer install path is in place.
+- `composer.json` package manifest for `padosoft/laravel-patent-box-tracker-admin` with Laravel auto-discovery.
+- `src/PatentBoxTrackerAdminServiceProvider.php` with publish tag `patent-box-admin-assets`.
+- Composer install path for host apps: `php artisan vendor:publish --tag=patent-box-admin-assets` publishes static panel assets to `public/vendor/patent-box-admin`.
 
-Until then, this repo stays on rolling `main` with the snapshot table in `docs/ENTERPRISE_PLAN.md` as the source of truth for completion state.
+### Changed
+
+- Macro 7.4 closure documented across `README.md`, `docs/ENTERPRISE_PLAN.md`, and `docs/PROGRESS.md`.
+- Macro status now marked 100% complete (Macro 0–7).
