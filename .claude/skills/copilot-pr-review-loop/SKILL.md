@@ -122,21 +122,34 @@ echo "=== local gates ==="
 node scripts/structure-check.mjs
 echo "=== CI ==="
 gh pr checks $PR --repo $REPO
-echo "=== latest Copilot review ==="
+echo "=== PR head SHA ==="
+# Anchor the Copilot signal to the current PR head. A review submitted
+# against an older commit MUST NOT satisfy the gate after a new push.
+HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')
+echo "head: $HEAD_SHA"
+echo "=== latest Copilot review for HEAD ==="
 # IMPORTANT: `gh api --paginate --jq '...'` applies the jq filter PER PAGE
 # and emits one result per page, which would concatenate JSON objects (for
 # `LATEST`) or produce multiple length integers (for `COPILOT_COMMENTS`).
 # Drop --jq from the gh call and slurp all pages into a single array via
 # `jq -s 'add'` first, then run the actual filter once on the merged array.
+# Filter by both login AND commit_id == HEAD_SHA so a stale review of an
+# older commit cannot satisfy the gate.
 LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
-  | jq -s 'add | [.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last // empty')
+  | jq -s --arg sha "$HEAD_SHA" \
+      'add
+       | [.[]
+           | select(.user.login=="copilot-pull-request-reviewer[bot]")
+           | select(.commit_id==$sha)
+           | select(.state!="PENDING")]
+       | sort_by(.submitted_at) | last // empty')
 if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-  echo "[gate] no Copilot review yet — convergence NOT reached"
+  echo "[gate] no Copilot review for HEAD ($HEAD_SHA) yet — convergence NOT reached"
   COPILOT_COMMENTS="unknown"
   COPILOT_STATE="absent"
   COPILOT_BODY=""
 else
-  echo "$LATEST" | jq '{state, body, id, submitted_at}'
+  echo "$LATEST" | jq '{state, body, id, submitted_at, commit_id}'
   REVIEW_ID=$(echo "$LATEST" | jq -r '.id')
   COPILOT_STATE=$(echo "$LATEST" | jq -r '.state')
   COPILOT_BODY=$(echo "$LATEST" | jq -r '.body // ""')
@@ -144,7 +157,7 @@ else
   COPILOT_COMMENTS=$(gh api --paginate "repos/$REPO/pulls/$PR/comments" \
     | jq -s "add | [.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
 fi
-echo "Copilot inline comments on latest review: $COPILOT_COMMENTS"
+echo "Copilot inline comments on latest HEAD review: $COPILOT_COMMENTS"
 echo "Copilot review state: $COPILOT_STATE"
 echo "=== mergeability ==="
 gh pr view $PR --repo $REPO --json mergeable,mergeStateStatus,headRefOid
@@ -152,10 +165,10 @@ gh pr view $PR --repo $REPO --json mergeable,mergeStateStatus,headRefOid
 
 Convergence is reached **only when ALL of these hold simultaneously**:
 
-- local gates pass;
-- every `gh pr checks` row is `pass`;
+- local gates pass on the current `HEAD_SHA`;
+- every `gh pr checks` row is `pass` on the current `HEAD_SHA`;
 - `gh pr view --json mergeable,mergeStateStatus` reports `mergeable=MERGEABLE` AND `mergeStateStatus=CLEAN`;
-- the Copilot quiet/approval signal — at least one of the following:
+- the Copilot quiet/approval signal applies to a review **whose `commit_id` equals the current `HEAD_SHA`** (a stale review of an older commit MUST be ignored), and at least one of the following holds:
   - `COPILOT_STATE=APPROVED`, OR
   - `COPILOT_COMMENTS=0` AND `$COPILOT_BODY` matches the "no new comments" sentinel (e.g. `grep -q "no new comments" <<<"$COPILOT_BODY"` returns true).
 
@@ -177,9 +190,19 @@ else
   LOCAL_GATES_OK=0
 fi
 
-# 1b. Copilot signal — recompute here so this block is truly self-contained.
+# 2. PR head SHA — every other gate is evaluated against THIS commit. A
+#    Copilot review of an older commit does not satisfy the gate.
+HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')
+
+# 3. Copilot signal — anchored to HEAD_SHA via commit_id, paginated, slurped.
 LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
-  | jq -s 'add | [.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last // empty')
+  | jq -s --arg sha "$HEAD_SHA" \
+      'add
+       | [.[]
+           | select(.user.login=="copilot-pull-request-reviewer[bot]")
+           | select(.commit_id==$sha)
+           | select(.state!="PENDING")]
+       | sort_by(.submitted_at) | last // empty')
 if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
   COPILOT_COMMENTS="unknown"
   COPILOT_STATE="absent"
@@ -192,19 +215,16 @@ else
     | jq -s "add | [.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
 fi
 
-# 2. CI rollup — every entry must be COMPLETED + SUCCESS, and the array
+# 4. CI rollup — every entry must be COMPLETED + SUCCESS, and the array
 #    must be non-empty (a PR with zero checks must not satisfy the gate).
 CI_ALL_PASS=$(gh pr view "$PR" --repo "$REPO" --json statusCheckRollup \
   --jq '(.statusCheckRollup | length > 0)
         and ([.statusCheckRollup[] | (.status=="COMPLETED" and .conclusion=="SUCCESS")] | all)' \
   | grep -q '^true$' && echo 1 || echo 0)
 
-# 3. Mergeability (GraphQL via `gh pr view --json`)
+# 5. Mergeability (GraphQL via `gh pr view --json`)
 MERGEABLE=$(gh pr view "$PR" --repo "$REPO" --json mergeable --jq '.mergeable')
 MERGE_STATE=$(gh pr view "$PR" --repo "$REPO" --json mergeStateStatus --jq '.mergeStateStatus')
-
-# 4. Copilot signal — re-uses the variables populated by the Detection
-#    query above. Re-run that block first if any time has passed.
 
 # Final guard — re-evaluate every condition as one expression.
 if [ "$LOCAL_GATES_OK" = "1" ] \
@@ -218,8 +238,8 @@ if [ "$LOCAL_GATES_OK" = "1" ] \
     --body "<one-paragraph summary + 'Review trail: N rounds, M comments, final 0/CLEAN'>"
 else
   echo "[gate] convergence not reached — do not merge"
-  printf '  LOCAL_GATES_OK=%s\n  CI_ALL_PASS=%s\n  MERGEABLE=%s\n  MERGE_STATE=%s\n  COPILOT_STATE=%s\n  COPILOT_COMMENTS=%s\n' \
-    "$LOCAL_GATES_OK" "$CI_ALL_PASS" "$MERGEABLE" "$MERGE_STATE" "$COPILOT_STATE" "$COPILOT_COMMENTS"
+  printf '  HEAD_SHA=%s\n  LOCAL_GATES_OK=%s\n  CI_ALL_PASS=%s\n  MERGEABLE=%s\n  MERGE_STATE=%s\n  COPILOT_STATE=%s\n  COPILOT_COMMENTS=%s\n' \
+    "$HEAD_SHA" "$LOCAL_GATES_OK" "$CI_ALL_PASS" "$MERGEABLE" "$MERGE_STATE" "$COPILOT_STATE" "$COPILOT_COMMENTS"
 fi
 ```
 
