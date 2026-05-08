@@ -232,8 +232,11 @@ else
   COPILOT_STATE=$(echo "$LATEST" | jq -r '.state')
   COPILOT_BODY=$(echo "$LATEST" | jq -r '.body // ""')
   # Slurp every page of comments into one array, then filter and count once.
+  # --argjson rid "$REVIEW_ID" passes the id as a numeric jq variable so the
+  # filter does not depend on shell interpolation (avoids parse errors and
+  # accidental expansion if REVIEW_ID is ever empty/non-numeric).
   COPILOT_COMMENTS=$(gh api --paginate "repos/$REPO/pulls/$PR/comments" \
-    | jq -s "add | [.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
+    | jq -s --argjson rid "$REVIEW_ID" 'add | [.[] | select(.pull_request_review_id==$rid)] | length')
 fi
 echo "Copilot inline comments on latest HEAD review: $COPILOT_COMMENTS"
 echo "Copilot review state: $COPILOT_STATE"
@@ -292,8 +295,11 @@ else
   REVIEW_ID=$(echo "$LATEST" | jq -r '.id')
   COPILOT_STATE=$(echo "$LATEST" | jq -r '.state')
   COPILOT_BODY=$(echo "$LATEST" | jq -r '.body // ""')
+  # --argjson rid "$REVIEW_ID" passes the id as a numeric jq variable so the
+  # filter does not depend on shell interpolation (avoids parse errors and
+  # accidental expansion if REVIEW_ID is ever empty/non-numeric).
   COPILOT_COMMENTS=$(gh api --paginate "repos/$REPO/pulls/$PR/comments" \
-    | jq -s "add | [.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
+    | jq -s --argjson rid "$REVIEW_ID" 'add | [.[] | select(.pull_request_review_id==$rid)] | length')
 fi
 
 # 4. CI rollup — every entry must be COMPLETED + SUCCESS, and the array
