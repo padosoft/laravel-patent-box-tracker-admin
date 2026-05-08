@@ -15,7 +15,7 @@ Read these first before code work:
 - Use macro/subtask branch model.
 - Update `docs/PROGRESS.md` during work and `docs/LESSON.md` for reusable learnings.
 - Request Copilot review on every PR and keep loop active until unresolved comments and CI are clean.
-- **Auto-merge on convergence — DO NOT pause to ask.** When local gates pass, CI is fully green, Copilot's latest review has 0 inline comments (or approves), and `mergeable=MERGEABLE` + `mergeStateStatus=CLEAN`, run the squash merge with `--delete-branch` immediately, log the merge commit in `docs/PROGRESS.md`, and continue with the next subtask. Pausing the loop at convergence is a process bug. Bypass conditions and the merge command are in `docs/RULES.md` and `.claude/skills/copilot-pr-review-loop/SKILL.md`.
+- **Auto-merge on convergence — DO NOT pause to ask.** When local gates pass, every CI check is `pass`, the PR is `mergeable=MERGEABLE` + `mergeStateStatus=CLEAN`, AND the Copilot quiet/approval signal holds (review state is `APPROVED`, OR latest review has `0` inline comments AND its body matches the "no new comments" sentinel) — run the squash merge with `--delete-branch` immediately, log the merge commit in `docs/PROGRESS.md`, and continue with the next subtask. A bare "0 inline comments" is NOT enough: Copilot can leave substantive feedback only in the review body, so always check the body/state alongside the inline count. Pausing the loop at convergence is a process bug. Full convergence definition, bypass conditions, and the merge command are in `docs/RULES.md` and `.claude/skills/copilot-pr-review-loop/SKILL.md`.
 - Never mark a task complete without:
   - all local gates passing
   - PR with requested reviewers, active CI checks, and no unresolved actionable comments

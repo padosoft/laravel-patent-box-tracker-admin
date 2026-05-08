@@ -163,7 +163,7 @@ A bare `COPILOT_COMMENTS=0` is **not** sufficient — Copilot can submit a `COMM
 
 ## Auto-merge command (default path)
 
-Run this only after the convergence checks above have all passed — including the explicit body/approval signal, not just `COPILOT_COMMENTS == 0`. Treat the merge command as the final action of the convergence detector, not a shortcut. The snippet below is self-contained: it computes every gate variable from `gh` so it can be copy-pasted as-is, with `$PR`, `$REPO`, and the local-gate command as the only inputs from the caller.
+Run this only after the convergence checks above have all passed — including the explicit body/approval signal, not just `COPILOT_COMMENTS == 0`. Treat the merge command as the final action of the convergence detector, not a shortcut. The snippet below is self-contained: it computes every gate variable — including the Copilot signals — from `gh` so it can be copy-pasted as-is, with `$PR`, `$REPO`, and the local-gate command as the only inputs from the caller. (The earlier "Detection query" is a prose-friendly walkthrough; this one is the executable form and does not depend on variables it does not set.)
 
 ```bash
 # Inputs: $PR, $REPO. Replace `node scripts/structure-check.mjs` with the
@@ -175,6 +175,21 @@ if node scripts/structure-check.mjs >/dev/null 2>&1; then
   LOCAL_GATES_OK=1
 else
   LOCAL_GATES_OK=0
+fi
+
+# 1b. Copilot signal — recompute here so this block is truly self-contained.
+LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
+  | jq -s 'add | [.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last // empty')
+if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+  COPILOT_COMMENTS="unknown"
+  COPILOT_STATE="absent"
+  COPILOT_BODY=""
+else
+  REVIEW_ID=$(echo "$LATEST" | jq -r '.id')
+  COPILOT_STATE=$(echo "$LATEST" | jq -r '.state')
+  COPILOT_BODY=$(echo "$LATEST" | jq -r '.body // ""')
+  COPILOT_COMMENTS=$(gh api --paginate "repos/$REPO/pulls/$PR/comments" \
+    | jq -s "add | [.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
 fi
 
 # 2. CI rollup — every entry must be COMPLETED + SUCCESS, and the array

@@ -1,26 +1,22 @@
 # PROGRESS
 
-## 2026-05-08 (PR #3 mergeata + nuova regola di auto-merge)
-
-- **PR #3 mergeata** in `b77e8ed` (squash + branch eliminato) dopo 7 giri di review Copilot e 22 commenti applicati. La 7ª review è arrivata con zero commenti inline e body `"generated no new comments"`. CI completamente verde su `3bde31c` (Structure check 5s + Playwright smoke 44s); stato `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
-- Branch `task-admin-readme-and-ci` rimosso dopo il merge.
-- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`:
-  - se i gate locali passano, tutti i check CI sono `pass`, l'ultima review Copilot ha zero commenti inline (oppure è in stato `APPROVED`) e la PR risulta `MERGEABLE` + `CLEAN`, il merge parte automaticamente senza chiedere conferma;
-  - i bypass sono enumerati esplicitamente: PR che toccano segreti/infra/azioni distruttive, richieste esplicite di attendere da parte dell'utente, base diversa da `main`;
-  - resta obbligatorio annotare il commit di merge in `docs/PROGRESS.md` per mantenere l'audit trail.
-
-## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline)
+## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline → mergiata + nuova regola di auto-merge)
 
 - Branch: `task-admin-readme-and-ci` su `main`.
-- PR aperta: https://github.com/padosoft/laravel-patent-box-tracker-admin/pull/3
-- Commit:
+- PR: https://github.com/padosoft/laravel-patent-box-tracker-admin/pull/3
+- Commit principali:
   - `3574174` — community README + screenshots + Playwright smoke + CI workflow + CHANGELOG + skill/RULES pin upstream v1.0.1.
-  - `7fb49f6` — `package-lock.json` per sbloccare `actions/setup-node` cache.
-- CI: ✅ entrambi green (Structure check 7s + Playwright smoke 50s) sul run `25549929711`.
-- Review:
-  - `chatgpt-codex-connector[bot]` ha aperto un P1 (npm cache senza lockfile) → risolto da `7fb49f6` e replicato come commento su PR.
-  - `Copilot` (`copilot-pull-request-reviewer[bot]`) presente in `requested_reviewers` (verificato via REST `/requested_reviewers`); review in attesa.
-- Stato loop: PR aperta, CI green, Copilot richiesto e in attesa → no merge fino a review.
+  - `7fb49f6` — `package-lock.json` per sbloccare la cache di `actions/setup-node`.
+  - successivi 5 commit di fix sui giri Copilot (resolution map per ciascun giro pubblicata sul thread della PR).
+- CI baseline iniziale verde sul run `25549929711` (Structure check 7s + Playwright smoke 50s) e di nuovo verde sul commit finale `3bde31c` (Structure check 5s + Playwright smoke 44s).
+- Review trail:
+  - `chatgpt-codex-connector[bot]` — un P1 sul lockfile mancante, risolto in `7fb49f6` e ack-ato sul thread.
+  - `copilot-pull-request-reviewer[bot]` — 7 giri di review, 22 commenti totali applicati. La 7ª review è arrivata con zero commenti inline e body `"generated no new comments"`.
+- **PR #3 mergiata** in `b77e8ed` (squash + branch eliminato) con stato `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
+- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`:
+  - se i gate locali passano, tutti i check CI sono `pass`, la PR risulta `MERGEABLE` + `CLEAN` e Copilot è in stato `APPROVED` (oppure ha zero commenti inline AND il body contiene il sentinel "no new comments"), il merge parte automaticamente senza chiedere conferma;
+  - i bypass sono enumerati esplicitamente: PR che toccano segreti/infra/azioni distruttive, richieste esplicite di attendere da parte dell'utente, base diversa da `main`;
+  - resta obbligatorio annotare il commit di merge in `docs/PROGRESS.md` per mantenere l'audit trail.
 
 ## 2026-05-08 (sync con package v1.0.1 + README WOW)
 
