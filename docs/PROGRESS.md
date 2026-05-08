@@ -1,5 +1,18 @@
 # PROGRESS
 
+## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline)
+
+- Branch: `task-admin-readme-and-ci` su `main`.
+- PR aperta: https://github.com/padosoft/laravel-patent-box-tracker-admin/pull/3
+- Commit:
+  - `3574174` — community README + screenshots + Playwright smoke + CI workflow + CHANGELOG + skill/RULES pin upstream v1.0.1.
+  - `7fb49f6` — `package-lock.json` per sbloccare `actions/setup-node` cache.
+- CI: ✅ entrambi green (Structure check 7s + Playwright smoke 50s) sul run `25549929711`.
+- Review:
+  - `chatgpt-codex-connector[bot]` ha aperto un P1 (npm cache senza lockfile) → risolto da `7fb49f6` e replicato come commento su PR.
+  - `Copilot` (`copilot-pull-request-reviewer[bot]`) presente in `requested_reviewers` (verificato via REST `/requested_reviewers`); review in attesa.
+- Stato loop: PR aperta, CI green, Copilot richiesto e in attesa → no merge fino a review.
+
 ## 2026-05-08 (sync con package v1.0.1 + README WOW)
 
 - Audit upstream `padosoft/laravel-patent-box-tracker`:
