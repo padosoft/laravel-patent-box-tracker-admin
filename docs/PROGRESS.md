@@ -2,6 +2,39 @@
 
 ## 2026-05-08
 
+- Stato roadmap admin: completate Macro 5 (API client foundation) e Macro 6 (UX design + run/detail interactions) in stato operativo locale.
+- Stato subtask:
+  - `project/api-client.jsx` presente e integrato in `index.html`.
+  - flussi `new run` e `session detail` ora usano API live (`dry-run`, `create session`, `get session`, `get commits`, `get evidence`, `get dossiers`, `render dossier`, `download dossier`).
+  - mappatura sessione robusta anche con payload top-level su campi fiscali (`fiscal_year`, `denomination`, `p_iva`, `regime`).
+  - filtri/sommari sessioni collegati ai dati API quando disponibili (`PB.SESSIONS` come fallback operativo).
+- Stato PR/loop:
+  - nessuna PR aperta in corso in questo repo (`gh pr list --state open` vuoto).
+  - PR #1 e #2 sul branch macro `task-admin-operating-system` risultano mergeate.
+  - passaggio a `main` completato dopo `PR #2` come da remoto.
+- Gate locali:
+  - `php -v` disponibile (8.4.20), ma il repo admin non contiene stack Node/npm nel workspace corrente (no `npm run test/build/e2e`).
+  - `project` usa HTML/JS puro (nessun test Playwright presente nello stato corrente).
+  - test API completi verificati nel repo package collegato.
+- Note finali:
+  - nessun blocker operativo immediato; la roadmap si considera pronta per chiusura con i limiti locali (mancanza strumenti frontend) annotati.
+
+## 2026-05-08
+
+- Stato operativo locale su admin:
+  - `project/api-client.jsx` introdotto e allineato ai parametri API base (`/api/patent-box/v1`), con normalizzazione sessione, commit, evidence, dossier e detail payload.
+  - `project/pages-detail.jsx` e `project/pages-newrun.jsx` ora usano polling + live data/API-driven flow (dry-run → create session → render queue).
+  - `TrackerApi` mapping corretto per leggere campi top-level di `tax_identity` restituiti da package API (`fiscal_year`, `denomination`, `p_iva`, `regime`), evitando campi vuoti in dashboard/sessioni.
+  - Fix pratico in client: `apiEnabled` rispettato dal localStorage, evitando config incoerente.
+- Stato subtask:
+  - `task-admin-operating-system` rimane base di lavoro (main), con design e funzionalità API client ormai in stato operativo locale.
+  - Macro 5 (API client foundation + bootstrap) e parte Macro 6 (UX run/detail) avanzate, senza nuova PR avviata in questa sessione per policy ambiente.
+- Limiti locali:
+  - nessun test automatizzato frontend disponibile in questo workspace (`npm`/playwright non presenti).
+  - i passaggi PR/Copilot/CI restano da eseguire nel prossimo loop remoto.
+
+## 2026-05-08
+
 - Stato admin aggiornato su `main`:
   - PR #1 (`task-admin-operating-system-subtask-6.5-admin-ui` -> `task-admin-operating-system`) mergeata.
   - PR #2 (`task-admin-operating-system` -> `main`) aperta e merged.

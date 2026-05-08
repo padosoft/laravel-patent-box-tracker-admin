@@ -2,6 +2,18 @@
 
 ## 2026-05-08
 
+- In questo ciclo, `gh pr list` è stato usato per verificare stato reale PR aperte; dove nulla risulta aperto, il macro può essere marcato come chiuso anche se i test frontend non sono eseguibili localmente.
+- `php` risulta disponibile in PATH (`8.4.20`) quindi la verifica dei pacchetti può essere fatta su `vendor/bin/phpunit.bat` anche quando il repo admin non espone tool frontend.
+- Se non esiste `npm`/Playwright in repo admin, registrare il limite come blocker non funzionale e usare test API del package come gate operativo minimo per la chiusura end-to-end.
+- In assenza di pipeline frontend nel repo admin, i file statici `project/*.jsx` devono rimanere coerenti con il design source e documentare eventuali divergenze nel `docs/PROGRESS.md`.
+
+## 2026-05-08
+
+- Integrazione admin/API: la normalizzazione lato client va fatta sia su payload v1 (`tax_identity`) sia su campi top-level (`denomination`, `fiscal_year`, `p_iva`, `regime`) per evitare campi vuoti quando gli endpoint cambiano forma.
+- `enabled` nelle impostazioni API deve essere persistito separatamente dal token: memorizzare un booleano dedicato evita regressioni dove il client restava disattivato per override incoerente.
+
+## 2026-05-08
+
 - In assenza di scaffold Laravel/React preesistente nell’admin repo, la baseline UI può essere resa disponibile copiando l’intero set `project/` dal design di riferimento (HTML + JSX + CSS) e mantenendo l’evoluzione a step successivi verso integrazione Laravel/SWR/API client.
 - Registrare nel `docs/PROGRESS.md` la consegna della baseline anche senza build/test automatici quando l’ambiente backend non fornisce runtime completo.
 
