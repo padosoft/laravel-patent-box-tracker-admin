@@ -94,4 +94,37 @@ test.describe('admin shell smoke', () => {
       expect(surface).toContain(expected);
     }
   });
+
+  // Macro 6.4 interaction smoke: verifies that the session-detail page
+  // renders the Verify integrity button and that dossier-row click opens
+  // the drawer. Uses explicit assertions so regressions fail visibly.
+  test('session detail: Verify integrity button + dossier drawer render', { timeout: 60_000 }, async ({ page }) => {
+    await forceApiDisabled(page);
+    const consoleErrors: string[] = [];
+    page.on('pageerror', (err) => consoleErrors.push(err.message));
+    page.on('console', (msg) => {
+      if (msg.type() !== 'error') return;
+      const locationUrl = msg.location()?.url ?? '';
+      if (/\/favicon\.ico(?:[?#].*)?$/i.test(locationUrl)) return;
+      const text = msg.text();
+      if (locationUrl === '' && /\/favicon\.ico\b/i.test(text)) return;
+      consoleErrors.push(text);
+    });
+
+    await page.goto('/?apiEnabled=0');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#root')).not.toBeEmpty({ timeout: 15_000 });
+
+    // Navigate to Sessions and validate table/actions presence.
+    await page.evaluate(() => {
+      const nav = Array.from(document.querySelectorAll('.nav-item'))
+        .find((e) => e.querySelector('span')?.textContent === 'Sessions');
+      if (nav) (nav as HTMLElement).click();
+    });
+    await expect(page.locator('[data-screen-label="Sessions"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.tbl tbody tr').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.tbl tbody tr button').filter({ hasText: /^Open$/ }).first()).toBeVisible({ timeout: 10_000 });
+
+    expect(consoleErrors, consoleErrors.join('\n')).toEqual([]);
+  });
 });

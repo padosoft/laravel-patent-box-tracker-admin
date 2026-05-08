@@ -335,7 +335,7 @@ Se ci sono blocchi remoti persistenti, il subtask resta aperto con blocker espli
 
 ---
 
-## Stato roadmap (snapshot 2026-05-08)
+## Stato roadmap (snapshot 2026-05-08, post-PR #4 + PR #5)
 
 | Macro | Scope | Stato |
 |-------|-------|-------|
@@ -345,21 +345,19 @@ Se ci sono blocchi remoti persistenti, il subtask resta aperto con blocker espli
 | 3 | Write/job lifecycle + state machine (package repo) | ✅ Done upstream — queue APIs + job state shipped |
 | 4 | Security and data access hardening (package repo) | ✅ Done upstream — token gate + rate limiter + scoped download in `v1.0.0` / patched in `v1.0.1` |
 | 5 | Admin API client foundation (admin repo) | ✅ Done — `project/api-client.jsx` covers full v1 surface, error alias, bearer support |
-| 6 | Admin UX + design implementation (admin repo) | 🟡 Mostly done — Macro 6.1–6.3 shipped via PR #1/#2; Macro 6.4 integrity check button + dossier detail panel are tracked as polish gaps |
-| 7 | Contracts, docs, release, tag (admin repo) | 🟡 In progress — README rewrite this session; final tag pending Playwright pipeline + CI |
+| 6 | Admin UX + design implementation (admin repo) | ✅ Done — 6.1–6.3 via PR #1/#2; 6.4a integrity-check button + 6.4b dossier detail drawer shipped via `task-admin-integrity-and-dossier-detail` (PR #5) |
+| 7 | Contracts, docs, release, tag (admin repo) | 🟡 README ✅ (PR #3), CI baseline ✅ (PR #3), auto-merge convergence rule ✅ (PR #4), Macro 6 polish ✅ (PR #5). Remaining: Composer install path + `v1.0.0` tag |
 
-### Macro 6 polish gaps (carry-over)
+### Macro 6 polish gaps — RESOLVED in PR #5
 
-- **6.4a** integrity check action: `TrackerApi.verifySessionIntegrity` is wired in the client but not yet bound to a button on the session detail page.
-- **6.4b** dossier detail drawer: `TrackerApi.getDossier` exists; UI uses only `downloadUrl`. Add a side drawer with metadata + sha256 once Playwright pipeline lands.
-
-These can ship as a follow-up subtask `task-admin-integrity-and-dossier-detail` against `main`.
+- **6.4a** integrity check action: `TrackerApi.verifySessionIntegrity` now bound to the **Verify integrity** button on the session detail page-head. Result toast + persistent badge under the page header showing `verified ✓ head … N commits` or `first_failure at row N`.
+- **6.4b** dossier detail drawer: `TrackerApi.getDossier` consumed by the new `DossierDrawer` component. Click any row in the Dossiers tab → opens a side drawer with format/locale, full SHA-256 (copy-to-clipboard), byte size, generated_at, server-side path, parent session id, and a one-click download.
 
 ### Macro 7 outstanding
 
-- 7.1 contract suite frontend: blocked locally — no `npm`/Playwright in this workspace; must be added in CI before cutting `v1.0.0` admin tag.
-- 7.2 README wow rewrite: ✅ delivered in this session.
-- 7.3 lessons/skills consolidation: ✅ refreshed this session (upstream version pin, endpoint surface, error taxonomy mirrored into `RULES.md` and the enterprise skill).
-- 7.4 tag/release: pending CI + Macro 6 polish gaps.
+- 7.1 contract suite frontend: ✅ baseline shipped in PR #3 (structure-check + Playwright smoke). Wider per-workflow Playwright coverage is still nice-to-have but not blocking.
+- 7.2 README wow rewrite: ✅ PR #3.
+- 7.3 lessons/skills consolidation: ✅ PR #3 + PR #4 (auto-merge convergence rule, head-SHA anchoring, state-whitelist, unresolved-threads gate, Italian/English bikeshed pinned to `merged`).
+- 7.4 tag/release: Composer install path + `v1.0.0` admin tag remain. The host-mounting Composer scaffold is the only material item left; after it lands the tag can be cut.
 
 

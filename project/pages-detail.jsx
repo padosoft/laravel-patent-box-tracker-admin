@@ -4,6 +4,13 @@ function PageDetail({ sessionId, onNavigate, live }) {
   const toast = useToast();
   const [tab, setTab] = React.useState('commits');
   const [drawerCommit, setDrawerCommit] = React.useState(null);
+  const [drawerDossier, setDrawerDossier] = React.useState(null);
+  const [drawerDossierLoading, setDrawerDossierLoading] = React.useState(false);
+  // Tracks the most recent onOpenDossier request so concurrent calls do not
+  // race to clear the loading state for the wrong request.
+  const dossierReqRef = React.useRef(0);
+  const [integrity, setIntegrity] = React.useState(null);
+  const [integrityLoading, setIntegrityLoading] = React.useState(false);
   const [renderingFormat, setRenderingFormat] = React.useState('json');
 
   const baseSession = PB.SESSIONS.find((s) => s.id === sessionId) || PB.SESSIONS[0] || {};
@@ -69,6 +76,99 @@ function PageDetail({ sessionId, onNavigate, live }) {
     });
   };
 
+  // Macro 6.4a — Verify hash-chain integrity for the current session by
+  // calling GET /v1/tracking-sessions/{id}/integrity. The result is shown
+  // both as a toast (immediate feedback) and as a small badge persisted in
+  // local state so the operator can scan the latest verification at a glance
+  // without re-clicking.
+  const onVerifyIntegrity = async () => {
+    if (typeof TrackerApi === 'undefined') {
+      toast.push({ kind: 'error', title: 'API non disponibile', body: 'Tracker API client non caricato.' });
+      return;
+    }
+    setIntegrityLoading(true);
+    try {
+      const response = await TrackerApi.verifySessionIntegrity(sessionId);
+      if (!response.ok) {
+        toast.push({
+          kind: 'error',
+          title: 'Integrity error',
+          body: response.error?.message || `Verification request failed (${response.status})`,
+        });
+        setIntegrity({ ok: false, message: response.error?.message || 'request failed', verified_at: new Date().toISOString() });
+        return;
+      }
+      const payload = TrackerApi.normalize.integrity(response.data || {});
+      setIntegrity({
+        ok: payload.verified === true,
+        verified: payload.verified === true,
+        head: payload.head,
+        commit_count: payload.commit_count,
+        first_failure: payload.first_failure,
+        verified_at: new Date().toISOString(),
+      });
+      if (payload.verified) {
+        toast.push({
+          kind: 'ok',
+          title: 'Hash chain verified',
+          body: `head ${String(payload.head || '').slice(0, 12)} · ${payload.commit_count} commits`,
+        });
+      } else {
+        toast.push({
+          kind: 'error',
+          title: 'Hash chain broken',
+          body: payload.first_failure != null
+            ? `First failure at row ${payload.first_failure} — dossier integrity compromised`
+            : 'Verification failed — see API response for details',
+        });
+      }
+    } finally {
+      setIntegrityLoading(false);
+    }
+  };
+
+  // Macro 6.4b — Open the per-dossier detail drawer. Calls GET
+  // /v1/tracking-sessions/{id}/dossiers/{dossierId} and surfaces the full
+  // metadata (sha256, byte_size, generated_at, format, locale, path) plus
+  // a one-click download. Falls back to the row data if the API is not
+  // configured (offline demo).
+  const onOpenDossier = async (row) => {
+    if (typeof TrackerApi === 'undefined' || !TrackerApi.config?.enabled) {
+      setDrawerDossier({ ...row });
+      return;
+    }
+    // Track which dossier id was requested so that a stale async response
+    // arriving after the drawer was closed or a different row clicked does
+    // not overwrite the current state. We use a closure-captured id for
+    // the comparison instead of ref-based tracking to keep the JSX portable.
+    const reqId = ++dossierReqRef.current;
+    setDrawerDossier({ ...row, _stale: true });
+    setDrawerDossierLoading(true);
+    try {
+      const response = await TrackerApi.getDossier(sessionId, row.id);
+      // Guard: skip stale update if the user closed the drawer or opened a
+      // different dossier while this request was in-flight.
+      setDrawerDossier((current) => {
+        if (!current || current.id !== row.id) return current;
+        if (!response.ok) {
+          toast.push({
+            kind: 'error',
+            title: 'Dossier load error',
+            body: response.error?.message || 'Unable to load dossier detail.',
+          });
+          return { ...row };
+        }
+        const fresh = TrackerApi.normalize.dossiers([response.data || {}])[0] || row;
+        return { ...row, ...fresh };
+      });
+    } finally {
+      // Only clear the loading flag for the request that triggered it.
+      if (dossierReqRef.current === reqId) {
+        setDrawerDossierLoading(false);
+      }
+    }
+  };
+
   return (
     <div className="page wide" data-screen-label={`Session ${sessionId}`}>
       <div className="page-head">
@@ -82,6 +182,14 @@ function PageDetail({ sessionId, onNavigate, live }) {
         </div>
         <div className="page-actions">
           <button className="btn" onClick={() => window.location.reload()}><I.Refresh size={13} /> Refresh</button>
+          <button
+            className="btn"
+            onClick={onVerifyIntegrity}
+            disabled={integrityLoading}
+            title="Calls GET /v1/tracking-sessions/{id}/integrity"
+          >
+            <I.Check size={13} /> {integrityLoading ? 'Verifying…' : 'Verify integrity'}
+          </button>
           <button className="btn" onClick={() => onRenderDossier('json')}><I.External size={13} /> Render JSON</button>
           <button className="btn pb-primary" onClick={() => onRenderDossier('pdf')}><I.Send size={13} /> Render PDF</button>
         </div>
@@ -103,6 +211,31 @@ function PageDetail({ sessionId, onNavigate, live }) {
           { label: 'Started', value: PB.fmtDt(session.created_at).slice(11), sub: PB.fmtDt(session.created_at).slice(0, 10) },
         ]} />
       </div>
+
+      {integrity && (
+        <div className={`card`} style={{ marginTop: 12, borderColor: integrity.verified ? 'var(--status-success)' : 'var(--status-failed)' }}>
+          <div className="card-body" style={{ padding: '8px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+            {integrity.verified ? <I.Check size={14} /> : <I.X size={14} />}
+            <strong style={{ fontWeight: 500 }}>
+              {integrity.verified ? 'Hash chain verified' : 'Hash chain broken'}
+            </strong>
+            {integrity.verified ? (
+              <>
+                <span className="mono" style={{ fontSize: 11.5 }}>head {String(integrity.head || '').slice(0, 16) || '—'}</span>
+                <span className="muted" style={{ fontSize: 11.5 }}>· {integrity.commit_count || 0} commits</span>
+              </>
+            ) : (
+              <span className="muted" style={{ fontSize: 11.5 }}>
+                {integrity.first_failure != null
+                  ? `first failure at row ${integrity.first_failure}`
+                  : (integrity.message || 'verification failed')}
+              </span>
+            )}
+            <span style={{ flex: 1 }} />
+            <span className="muted" style={{ fontSize: 11 }}>verified at {PB.fmtDt(integrity.verified_at)}</span>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 16, marginTop: 16 }}>
         <HashChainStrip chain={session.chain} />
@@ -167,12 +300,25 @@ function PageDetail({ sessionId, onNavigate, live }) {
         <div style={{ marginTop: 14 }}>
           {tab === 'commits' && <CommitsTab commits={commits} onOpen={setDrawerCommit} />}
           {tab === 'evidence' && <EvidenceTab evidence={evidence} />}
-          {tab === 'dossiers' && <DossiersTab dossiers={dossiers} onDownload={(id) => TrackerApi?.downloadUrl(sessionId, id)} onRender={(format) => onRenderDossier(format)} />}
+          {tab === 'dossiers' && (
+            <DossiersTab
+              dossiers={dossiers}
+              onDownload={(id) => TrackerApi?.downloadUrl(sessionId, id)}
+              onRender={(format) => onRenderDossier(format)}
+              onOpen={onOpenDossier}
+            />
+          )}
           {tab === 'json' && <JsonPayloadTab session={session} repos={repos} phaseBreakdown={phaseBreakdown} />}
         </div>
       </div>
 
       <CommitDrawer commit={drawerCommit} onClose={() => setDrawerCommit(null)} />
+      <DossierDrawer
+        dossier={drawerDossier}
+        loading={drawerDossierLoading}
+        onClose={() => setDrawerDossier(null)}
+        onDownload={(id) => TrackerApi?.downloadUrl(sessionId, id)}
+      />
     </div>
   );
 }
@@ -301,7 +447,7 @@ function EvidenceTab({ evidence }) {
   );
 }
 
-function DossiersTab({ dossiers, onDownload, onRender }) {
+function DossiersTab({ dossiers, onDownload, onRender, onOpen }) {
   return (
     <div className="card">
       <div className="card-head">
@@ -314,7 +460,12 @@ function DossiersTab({ dossiers, onDownload, onRender }) {
       <div className="card-body flush">
         {dossiers.length === 0 && <div className="empty" style={{ padding: 16 }}>No dossier generated yet.</div>}
         {dossiers.map((d) => (
-          <div key={d.id} className="dossier-row">
+          <div
+            key={d.id}
+            className="dossier-row"
+            style={{ cursor: onOpen ? 'pointer' : 'default' }}
+            onClick={() => onOpen?.(d)}
+          >
             <div className={`icon-tile ${d.format}`}>{d.format.toUpperCase()}</div>
             <div>
               <b style={{ fontWeight: 500, fontSize: 13 }}>dossier-{d.id}.{d.format}</b>
@@ -325,11 +476,12 @@ function DossiersTab({ dossiers, onDownload, onRender }) {
               </div>
             </div>
             <span className="size">{PB.fmtBytes(d.byte_size || 0)}</span>
-            <button className="btn sm ghost"><I.Copy size={11} /></button>
-            <a href={onDownload ? onDownload(d.id) : '#'}
-               className="btn sm"
-               target="_blank"
-               rel="noreferrer"
+            <a
+              href={onDownload ? onDownload(d.id) : '#'}
+              className="btn sm"
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
             >
               <I.External size={11} /> Download
             </a>
@@ -337,6 +489,69 @@ function DossiersTab({ dossiers, onDownload, onRender }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// Macro 6.4b — Side drawer that surfaces the per-dossier metadata returned
+// by GET /v1/tracking-sessions/{id}/dossiers/{dossierId} (sha256, byte_size,
+// generated_at, format, locale, path) plus a one-click download. The
+// component re-uses the shared `Drawer` primitive from ui.jsx; it is purely
+// presentational and does not call the API itself — the parent fetches and
+// passes the row in.
+function DossierDrawer({ dossier, loading, onClose, onDownload }) {
+  if (!dossier) return null;
+  const downloadHref = onDownload ? onDownload(dossier.id) : null;
+  return (
+    <Drawer
+      open={Boolean(dossier)}
+      onClose={onClose}
+      title={`Dossier · #${dossier.id} · ${(dossier.format || '').toUpperCase()}`}
+      actions={downloadHref && (
+        <a href={downloadHref} className="btn sm pb-primary" target="_blank" rel="noreferrer">
+          <I.External size={11} /> Download
+        </a>
+      )}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13 }}>
+        {loading && (
+          <div className="muted" style={{ fontSize: 11.5 }}>Loading detail from API…</div>
+        )}
+        <div>
+          <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Format · locale</div>
+          <div>
+            <span className="badge outline">{dossier.format || '-'}</span>{' '}
+            <span className="badge outline">locale {dossier.locale || 'it'}</span>
+          </div>
+        </div>
+        <div>
+          <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>SHA-256</div>
+          <CopyDigest value={dossier.sha256} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div>
+            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Byte size</div>
+            <span className="mono" style={{ fontSize: 12 }}>{PB.fmtBytes(dossier.byte_size || 0)}</span>
+          </div>
+          <div>
+            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Generated at</div>
+            <span className="mono" style={{ fontSize: 12 }}>{PB.fmtDt(dossier.generated_at) || '-'}</span>
+          </div>
+        </div>
+        {dossier.path && (
+          <div>
+            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Storage path (server-side)</div>
+            <span className="mono" style={{ fontSize: 11.5, wordBreak: 'break-all' }}>{dossier.path}</span>
+          </div>
+        )}
+        <div>
+          <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Tracking session</div>
+          <span className="mono" style={{ fontSize: 12 }}>#{dossier.tracking_session_id || '-'}</span>
+        </div>
+        <div className="muted" style={{ fontSize: 11, lineHeight: 1.5 }}>
+          The download endpoint is session-scoped and ownership-checked server-side. Do not bookmark or share the resulting URL — re-render on demand.
+        </div>
+      </div>
+    </Drawer>
   );
 }
 
