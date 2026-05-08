@@ -65,8 +65,9 @@ const missingEndpoints = expectedEndpoints.filter(({ path, terminal }) => {
   const escaped = escapeRegex(path);
   // Accept the endpoint when followed by a string-terminator (quote/backtick),
   // a path separator, a query-string '?' or a template-literal '${...}'.
-  // Terminal-only endpoints (e.g. /health) are stricter — they must be at the
-  // end of the URL string in the source code.
+  // Terminal-only endpoints (e.g. /health) must close the URL — the only
+  // characters allowed immediately after are a quote/backtick (end of string)
+  // or '?' (start of a query string).
   const tail = terminal ? `(?=['"\`?])` : `(?=['"\`?]|/|\\$\\{)`;
   return !new RegExp(escaped + tail).test(apiClient);
 });

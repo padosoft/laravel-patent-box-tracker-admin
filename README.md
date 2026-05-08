@@ -43,7 +43,7 @@
 10. [Operator workflows](#operator-workflows)
 11. [HTTP API surface consumed (v1)](#http-api-surface-consumed-v1)
 12. [Security model](#security-model)
-13. [🚀 AI vibe-coding pack included](#-ai-vibe-coding-pack-included)
+13. [🚀 AI vibe-coding pack included](#ai-vibe-coding-pack-included)
 14. [Project layout](#project-layout)
 15. [Testing](#testing)
 16. [Roadmap](#roadmap)
