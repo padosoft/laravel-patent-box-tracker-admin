@@ -100,21 +100,46 @@ If you arm a background monitor:
 1. Apply every actionable comment (or document why it is non-actionable in a PR comment).
 2. Push the fix commit.
 3. Post a resolution map as a PR comment, mapping each comment id/path to the resolution.
-4. **Mark addressed threads as resolved via GraphQL.** The `isResolved` flag does not flip automatically when a fix lands — after a green push + resolution map post, mark every unresolved-not-outdated thread as resolved so the convergence gate can fire. Use the snippet below. If Copilot disagrees with a resolution, it will re-raise the concern as a new thread on the next review.
+4. **Mark addressed threads as resolved via GraphQL.** The `isResolved` flag does not flip automatically when a fix lands — after a green push + resolution map post, mark every unresolved-not-outdated thread as resolved so the convergence gate can fire. Use the snippet below. If Copilot disagrees with a resolution, it will re-raise the concern as a new thread on the next review. The fetch is paginated with the same cap-and-fail-closed pattern as the convergence gate (5 windows × 100 nodes = 500 threads); if your PR has more, the script aborts with an explicit instruction to handle pagination, so the gate can still trust its own input.
 
    ```bash
    PR=<n>; REPO=<owner/repo>
-   THREAD_IDS=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query='
-     query($owner:String!,$repo:String!,$pr:Int!){
+   RESOLVE_QUERY='
+     query($owner:String!,$repo:String!,$pr:Int!,$cursor:String){
        repository(owner:$owner,name:$repo){
          pullRequest(number:$pr){
-           reviewThreads(first:100){
+           reviewThreads(first:100, after:$cursor){
              nodes{ id isResolved isOutdated }
+             pageInfo{ hasNextPage endCursor }
            }
          }
        }
-     }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false) | .id')
+     }'
+   THREAD_IDS=""
+   RESOLVE_CURSOR=""
+   RESOLVE_PAGES=0
+   while :; do
+     RESOLVE_PAGES=$((RESOLVE_PAGES + 1))
+     if [ "$RESOLVE_PAGES" -gt 5 ]; then
+       echo "[abort] reviewThreads exceeded 5 pages of 100; resolve manually or extend the cap" >&2
+       THREAD_IDS=""
+       break
+     fi
+     if [ -z "$RESOLVE_CURSOR" ]; then
+       PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query="$RESOLVE_QUERY")
+     else
+       PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -F cursor="$RESOLVE_CURSOR" -f query="$RESOLVE_QUERY")
+     fi
+     PAGE_IDS=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false) | .id')
+     if [ -n "$PAGE_IDS" ]; then
+       THREAD_IDS="$THREAD_IDS"$'\n'"$PAGE_IDS"
+     fi
+     HAS_NEXT=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+     RESOLVE_CURSOR=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
+     [ "$HAS_NEXT" = "true" ] || break
+   done
    for tid in $THREAD_IDS; do
+     [ -z "$tid" ] && continue
      gh api graphql -F threadId="$tid" -f query='
        mutation($threadId:ID!){
          resolveReviewThread(input:{threadId:$threadId}){ thread{ id isResolved } }

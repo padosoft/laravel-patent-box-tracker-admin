@@ -69,12 +69,13 @@ gh pr edit <PR> --add-reviewer @copilot
 
    Apply all three before sorting by `submitted_at` and taking the last. The inline-count / body / state evaluation runs only on the row that survives all three filters.
 4. The PR is mergeable. Use `gh pr view <PR> --json mergeable,mergeStateStatus` (which surfaces GitHub's GraphQL fields) and require `mergeable=MERGEABLE` and `mergeStateStatus=CLEAN`. The REST endpoint exposes the same signal under different names (`mergeable: true` and `mergeable_state: "clean"`); pick one API and match the field names to it.
+5. **Zero unresolved review threads.** Query `repository.pullRequest.reviewThreads` via GraphQL and count nodes where `isResolved == false AND isOutdated == false`. The count must be `0` (with pagination handled — see the executable form in `.claude/skills/copilot-pr-review-loop/SKILL.md`, which fails the gate if more pages remain than the cap allows). Outdated threads (no longer applying to the current diff after a force/rebase push) are safe to ignore; non-outdated unresolved threads from any prior reviewer (Copilot, codex bot, human) MUST block auto-merge. Threads that were addressed in a fix commit are NOT auto-resolved by GitHub — the SKILL's "Closing the loop" step requires programmatically marking them resolved via the `resolveReviewThread` mutation after each fix push so this gate can fire.
 
-When all four are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorisation.
+When all five are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorisation.
 
 **Do NOT auto-merge if any of the following hold (canonical bypass list — `.claude/skills/copilot-pr-review-loop/SKILL.md` defers to this list):**
 
-- Any prior review still has unresolved actionable comments (resolution-map reply not posted, or comment marked unresolved by the reviewer).
+- Any actionable comment from any prior review remains unaddressed (no fix commit posted, no resolution-map note explaining why it is non-actionable). Note that this is distinct from condition #5 above: condition #5 fails when a thread's `isResolved` flag is still `false` regardless of whether the underlying issue was actually addressed; this bypass fires when the issue itself was not addressed (or was rejected without justification).
 - The PR touches secrets, credentials, infrastructure, deletions of historical commits, or anything that changes shared external systems beyond the repo itself (deploys, cron jobs, third-party API keys).
 - The user has said any of the following — or a clear synonym — anywhere in the active conversation since the PR opened: `"wait"`, `"do not merge"`, `"don't merge"`, `"stop"`, `"hold off"`, `"pause"`, or an equivalent imperative to halt the loop.
 - The branch base is not `main` (release branches and stacked PR chains still require explicit user confirmation per the macro/subtask rules).

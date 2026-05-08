@@ -1,6 +1,6 @@
 # PROGRESS
 
-## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline → mergeata + nuova regola di auto-merge)
+## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline → merged + nuova regola di auto-merge)
 
 - Branch: `task-admin-readme-and-ci` su `main`.
 - PR: https://github.com/padosoft/laravel-patent-box-tracker-admin/pull/3
@@ -12,7 +12,7 @@
 - Review trail:
   - `chatgpt-codex-connector[bot]` — un P1 sul lockfile mancante, risolto in `7fb49f6` e ack-ato sul thread.
   - `copilot-pull-request-reviewer[bot]` — 7 giri di review, 22 commenti totali applicati. La 7ª review è arrivata con zero commenti inline e body `"generated no new comments"`.
-- **PR #3 mergeata** in `b77e8ed` (squash + branch eliminato) con stato `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
+- **PR #3 merged** in `b77e8ed` (squash + branch eliminato) con stato `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
 - **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`:
   - se i gate locali passano, tutti i check CI sono `pass`, la PR risulta `MERGEABLE` + `CLEAN` e Copilot è in stato `APPROVED` (oppure ha zero commenti inline AND il body contiene il sentinel "no new comments"), il merge parte automaticamente senza chiedere conferma;
   - i bypass sono enumerati esplicitamente: PR che toccano segreti/infra/azioni distruttive, richieste esplicite di attendere da parte dell'utente, base diversa da `main`;
@@ -70,7 +70,7 @@
 ## 2026-05-08 (merge PR #1/#2 su main)
 
 - Stato admin aggiornato su `main`:
-  - PR #1 (`task-admin-operating-system-subtask-6.5-admin-ui` -> `task-admin-operating-system`) mergeata.
+  - PR #1 (`task-admin-operating-system-subtask-6.5-admin-ui` -> `task-admin-operating-system`) merged.
   - PR #2 (`task-admin-operating-system` -> `main`) aperta e merged.
   - Stato PR attivo: nessuna PR aperta.
 - Stato subtask:
