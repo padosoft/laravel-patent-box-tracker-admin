@@ -134,18 +134,10 @@ test.describe('admin shell smoke', () => {
     await expect(page.locator('[data-screen-label="Sessions"]')).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('.tbl tbody tr button').filter({ hasText: /^Open$/ }).first()).toBeVisible({ timeout: 10_000 });
 
-    // Open the first row from Sessions list via its explicit Open action.
-    await page.evaluate(() => {
-      const rows = Array.from(document.querySelectorAll('.tbl tbody tr'));
-      for (const row of rows) {
-        const openBtn = Array.from(row.querySelectorAll('button'))
-          .find((b) => (b.textContent || '').trim() === 'Open');
-        if (openBtn) {
-          (openBtn as HTMLElement).click();
-          return;
-        }
-      }
-    });
+    // Open the first row from Sessions list via explicit Open action.
+    const openBtn = page.locator('.tbl tbody tr button').filter({ hasText: /^Open$/ }).first();
+    await openBtn.click({ force: true });
+    await expect(page.locator('[data-screen-label^="Session "]')).toBeVisible({ timeout: 15_000 });
 
     // The Verify integrity button must become visible once the detail page
     // has rendered.
