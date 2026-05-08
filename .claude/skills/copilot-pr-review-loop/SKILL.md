@@ -100,9 +100,31 @@ If you arm a background monitor:
 1. Apply every actionable comment (or document why it is non-actionable in a PR comment).
 2. Push the fix commit.
 3. Post a resolution map as a PR comment, mapping each comment id/path to the resolution.
-4. Re-request Copilot via the primary command and verify in `requested_reviewers`.
-5. Restart the wait.
-6. **Auto-merge when convergence is reached** (default path — see below). Do NOT pause to ask for authorisation when the four convergence conditions all hold; pausing the loop is a bug, not caution.
+4. **Mark addressed threads as resolved via GraphQL.** The `isResolved` flag does not flip automatically when a fix lands — after a green push + resolution map post, mark every unresolved-not-outdated thread as resolved so the convergence gate can fire. Use the snippet below. If Copilot disagrees with a resolution, it will re-raise the concern as a new thread on the next review.
+
+   ```bash
+   PR=<n>; REPO=<owner/repo>
+   THREAD_IDS=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query='
+     query($owner:String!,$repo:String!,$pr:Int!){
+       repository(owner:$owner,name:$repo){
+         pullRequest(number:$pr){
+           reviewThreads(first:100){
+             nodes{ id isResolved isOutdated }
+           }
+         }
+       }
+     }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false) | .id')
+   for tid in $THREAD_IDS; do
+     gh api graphql -F threadId="$tid" -f query='
+       mutation($threadId:ID!){
+         resolveReviewThread(input:{threadId:$threadId}){ thread{ id isResolved } }
+       }' --jq '.data.resolveReviewThread.thread | "resolved \(.id)"'
+   done
+   ```
+
+5. Re-request Copilot via the primary command and verify in `requested_reviewers`.
+6. Restart the wait.
+7. **Auto-merge when convergence is reached** (default path — see below). Do NOT pause to ask for authorisation when the **five** convergence conditions all hold (local gates green, CI green, Copilot quiet on HEAD with the full filter, PR mergeable+clean, no unresolved review threads); pausing the loop is a bug, not caution.
 
 ## Convergence detection (when to auto-merge)
 
@@ -239,16 +261,50 @@ MERGE_STATE=$(gh pr view "$PR" --repo "$REPO" --json mergeStateStatus --jq '.mer
 #    block auto-merge. Enforce it executable-side via GraphQL: count threads
 #    where isResolved=false AND isOutdated=false (outdated threads no longer
 #    apply to the current diff and are safe to ignore).
-UNRESOLVED_THREADS=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query='
-  query($owner:String!,$repo:String!,$pr:Int!){
+#
+#    The query below pages through reviewThreads with a 100-node window, and
+#    sets UNRESOLVED_THREADS to "paginated" (a non-zero non-numeric sentinel
+#    that fails the gate) if pagination did not exhaust within 5 pages. Five
+#    windows = 500 threads, which is well above any realistic PR; if your
+#    PR truly has more, the safe default is to refuse the auto-merge and
+#    fall back to manual review.
+THREADS_QUERY='
+  query($owner:String!,$repo:String!,$pr:Int!,$cursor:String){
     repository(owner:$owner,name:$repo){
       pullRequest(number:$pr){
-        reviewThreads(first:100){
+        reviewThreads(first:100, after:$cursor){
           nodes{ isResolved isOutdated }
+          pageInfo{ hasNextPage endCursor }
         }
       }
     }
-  }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false)] | length' 2>/dev/null || echo "unknown")
+  }'
+THREADS_UNRESOLVED_TOTAL=0
+THREADS_CURSOR=""
+THREADS_PAGES=0
+THREADS_OVERFLOW=0
+while :; do
+  THREADS_PAGES=$((THREADS_PAGES + 1))
+  if [ "$THREADS_PAGES" -gt 5 ]; then
+    THREADS_OVERFLOW=1
+    break
+  fi
+  if [ -z "$THREADS_CURSOR" ]; then
+    PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query="$THREADS_QUERY" 2>/dev/null)
+  else
+    PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -F cursor="$THREADS_CURSOR" -f query="$THREADS_QUERY" 2>/dev/null)
+  fi
+  PAGE_COUNT=$(echo "$PAGE_JSON" | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false)] | length')
+  THREADS_UNRESOLVED_TOTAL=$((THREADS_UNRESOLVED_TOTAL + PAGE_COUNT))
+  HAS_NEXT=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
+  THREADS_CURSOR=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
+  [ "$HAS_NEXT" = "true" ] || break
+done
+if [ "$THREADS_OVERFLOW" = "1" ]; then
+  UNRESOLVED_THREADS="paginated"
+else
+  UNRESOLVED_THREADS="$THREADS_UNRESOLVED_TOTAL"
+fi
 
 # Final guard — re-evaluate every condition as one expression.
 if [ "$LOCAL_GATES_OK" = "1" ] \

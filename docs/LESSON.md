@@ -2,8 +2,8 @@
 
 ## 2026-05-08 (auto-merge convergence rule)
 
-- Pausing the Copilot loop at convergence (Copilot 0 inline + CI green + mergeable CLEAN) to ask the user is a **process bug**, not caution. The user already authorised the loop when they opened the PR; pausing burns wall-clock and inflates the review trail with no value.
-- The four convergence conditions are mechanical and verifiable via REST/`gh` — they leave no judgement room. When they hold, merge immediately and continue.
+- Pausing the Copilot loop at convergence (Copilot quiet on HEAD + CI green + mergeable CLEAN + no unresolved threads + local gates) to ask the user is a **process bug**, not caution. The user already authorised the loop when they opened the PR; pausing burns wall-clock and inflates the review trail with no value.
+- The five convergence conditions are mechanical and verifiable via REST/`gh`/GraphQL — they leave no judgement room. When they hold, merge immediately and continue. The five (canonical numbering matches `docs/RULES.md`): (1) local gates green; (2) every CI check `pass`; (3) Copilot quiet on HEAD with the full filter (login + commit_id + state whitelist); (4) `mergeable=MERGEABLE && mergeStateStatus=CLEAN`; (5) zero unresolved-and-not-outdated review threads.
 - Bypass conditions are about **what the PR touches**, not about uncertainty in the review state. If the PR is docs/code/tests against `main` with no secret/infra/destructive footprint, auto-merge. If it touches secrets/infra or a non-`main` base, ask.
 
 ## 2026-05-08 (Copilot wait discipline)
