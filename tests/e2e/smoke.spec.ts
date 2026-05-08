@@ -129,16 +129,16 @@ test.describe('admin shell smoke', () => {
     // The sessions table must show at least one data row.
     await expect(page.locator('.tbl tbody tr').first()).toBeVisible({ timeout: 10_000 });
 
-    // Open the first session. force:true bypasses any palette overlay that
-    // Chromium headless may render in front of the table rows.
-    // NOTE: do NOT use waitForLoadState('networkidle') after a SPA navigation
-    // because the client-side state update is synchronous and the network is
-    // already idle (API disabled) — the wait resolves before React re-renders.
-    // Instead we wait for a detail-page-only element as the render signal.
-    await page.locator('.tbl tbody tr').first().click({ force: true });
+    // Open the first session via its explicit Open action. Clicking the whole
+    // row is occasionally flaky in headless when overlays or text selection
+    // interfere with the row-level onClick handler.
+    await page.locator('.tbl tbody tr').first().locator('button').filter({ hasText: /^Open$/ }).click({ force: true });
 
-    // The Verify integrity button must become visible — this also serves as
-    // the wait for the detail page to finish rendering.
+    // Wait for the detail route to render. This marker exists only in
+    // PageDetail (<div data-screen-label={`Session ${sessionId}`}>).
+    await expect(page.locator('[data-screen-label^="Session "]')).toBeVisible({ timeout: 15_000 });
+
+    // The Verify integrity button must become visible.
     const verifyBtn = page.locator('button').filter({ hasText: /verify integrity/i });
     await expect(verifyBtn).toBeVisible({ timeout: 15_000 });
 
