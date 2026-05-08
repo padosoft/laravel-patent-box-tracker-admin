@@ -115,15 +115,25 @@ test.describe('admin shell smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#root')).not.toBeEmpty({ timeout: 15_000 });
 
-    // The dashboard "Recent sessions" table must show at least one data row.
-    await expect(page.locator('.tbl tbody tr').first()).toBeVisible({ timeout: 10_000 });
-
-    // Open the first recent session to reach the detail page. Trigger the
-    // row click from the browser context to avoid occasional headless
-    // pointer-interaction flakiness on table rows.
+    // Navigate to Sessions from sidebar.
     await page.evaluate(() => {
-      const firstRow = document.querySelector('.tbl tbody tr');
-      if (firstRow) (firstRow as HTMLElement).click();
+      const nav = Array.from(document.querySelectorAll('.nav-item'))
+        .find((e) => e.querySelector('span')?.textContent === 'Sessions');
+      if (nav) (nav as HTMLElement).click();
+    });
+    await expect(page.locator('[data-screen-label="Sessions"]')).toBeVisible({ timeout: 15_000 });
+
+    // Open the first row from Sessions list via its explicit Open action.
+    await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('.tbl tbody tr'));
+      for (const row of rows) {
+        const openBtn = Array.from(row.querySelectorAll('button'))
+          .find((b) => (b.textContent || '').trim() === 'Open');
+        if (openBtn) {
+          (openBtn as HTMLElement).click();
+          return;
+        }
+      }
     });
 
     // The Verify integrity button must become visible once the detail page
