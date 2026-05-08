@@ -1,5 +1,25 @@
 # PROGRESS
 
+## 2026-05-08
+
+- Package `laravel-patent-box-tracker` avanzato a `task/api-read-models`.
+- Consolidato Macro 2 Read APIs lato package:
+  - `GET /tracking-sessions/{trackingSession}/dossiers/{dossier}` detail endpoint,
+  - test `404` per sessioni mancanti su read endpoints (`not_found`),
+  - suite `tests/Feature/Api` ora a `36 tests` verdi (`179 assertions`).
+ - Subtask `2.4 Dossier detail endpoint` chiuso con PR:
+   - https://github.com/padosoft/laravel-patent-box-tracker/pull/7
+ - Copilot review requested per PR #7.
+
+## 2026-05-07 (Sincronizzazione package)
+
+- Package `laravel-patent-box-tracker` (macro 1 API foundation): suite API locale ora verde (`vendor/bin/phpunit.bat tests/Feature/Api` → `29 tests`, `149 assertions`).
+- Fix principali applicati sul package per contract/errore normalization:
+  - `error.code` coerente per payload invalidi (`validation_failed`)
+  - `error.code=not_found` su sessione inesistente
+  - `error.code=conflict` su render dossier non consentito
+- Stato macro in corso: PR/loop resta bloccato lato remoto (`Win32 error 5`, remote push/GitHub review). Nessuna chiusura formale senza PR/Copilot/CI nel flusso completo.
+
 ## 2026-05-07
 
 - Inizio fase operativa v1.x della roadmap admin + API-UX.
@@ -58,4 +78,19 @@
 - Stato subtask: `BLOCKED_ON_REMOTE_PUSH` (SSH `couldn't create signal pipe, Win32 error 5`).
 - Prossimo passo:
   - ripartire dalla sezione Macro 1 Subtask 1.1 nel branch package e chiudere PR/loop quando i credenziali/SSH sono risolti.
+
+## Stato esecuzione Macro 1 (Aggiornamento 2026-05-07)
+
+- Subtask attivo aggiornato: `1.2/1.3 Error taxonomy middleware + contract tests` (foundation scope).
+- Stato subtask locale:
+  - middleware `HandleApiErrors` aggiunto in `laravel-patent-box-tracker/src/Http/Middleware`;
+  - rotte API aggiornate con error taxonomy + `throttle` config;
+  - risposte API success stabilizzate via `ApiResponse`;
+  - nuovo test `tests/Feature/Api/ApiFoundationContractTest.php`.
+- Aggiornamento rapido eseguito in package:
+  - queue async ora espone stato e `job.id` coerente per tracking-session create/render,
+  - job rendering dossier persistono artefatti su path fisico (`storage/dossiers`) e aggiornano stato sessione,
+  - filtri read list allineati (sessions/evidence/dossiers meta + filtri aggiuntivi),
+  - reference API aggiornato con envelope e nuovi filtri.
+- Stato generale: `BLOCKED_ON_REMOTE_PUSH` (SSH `couldn't create signal pipe, Win32 error 5`) resta valido in questo ambiente.
 

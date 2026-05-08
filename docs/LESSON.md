@@ -12,4 +12,5 @@
 - Macro 0 bootstrap doc-only è stato completato e pushato (`task-admin-operating-system`), ma `gh pr create` fallisce con `HTTP 401` in questa sandbox: la PR deve essere aperta manualmente da utente autenticato.
 - In package macro1, l'introduzione di `ApiResponse::success()` ha evitato doppio nesting di `data`; in particolare, in fase iniziale era stato quasi introdotto un wrapper `data => ['data'=> ...]` e poi corretto.
 - Remote loop package: push a `task/api-foundation-hardening` può fallire in questa macchina per SSH (`Win32 error 5`, signal pipe). Bloccare manuale remoto e riaprire il loop nel prossimo ambiente.
+- 2026-05-07: nel package `laravel-patent-box-tracker` le API contract su 422/404/409 ora sono state rese esplicite nei controller (`ApiResponse::error`) dove il mapping middleware da solo era insufficiente in test (response wrapper non applicato su alcune eccezioni).
 
