@@ -1,5 +1,14 @@
 # PROGRESS
 
+## 2026-05-08 (PR #3 MERGED + auto-merge rule)
+
+- **PR #3 merged** in `b77e8ed` (squash + delete-branch) dopo 7 round di review Copilot, 22 commenti applicati, 7ª review con `0 inline comments` e body `"generated no new comments"`. CI verde su `3bde31c` (Structure check 5s + Playwright smoke 44s). `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
+- Branch `task-admin-readme-and-ci` eliminato.
+- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md`, `.claude/skills/copilot-pr-review-loop/SKILL.md`:
+  - quando local gates ✅ + CI all SUCCESS + Copilot ultima review 0 inline + mergeable CLEAN, **merge automatico senza chiedere**;
+  - bypass espliciti documentati (secrets/infra/destructive ops, "wait" dell'utente, base ≠ main);
+  - logging del merge in PROGRESS è obbligatorio per audit trail.
+
 ## 2026-05-08 (PR #3 — README WOW + screenshots + CI baseline)
 
 - Branch: `task-admin-readme-and-ci` su `main`.

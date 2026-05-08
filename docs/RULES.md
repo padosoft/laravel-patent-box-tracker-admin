@@ -54,7 +54,27 @@ gh pr edit <PR> --add-reviewer @copilot
 
 3. If that command fails (scope/resolution), use GraphQL fallback in `.claude/skills/copilot-pr-review-loop/SKILL.md`.
 4. Verify via `requested_reviewers` REST endpoint (NOT GraphQL `reviewRequests`).
-5. Do not merge before review+CI clearance.
+5. Apply fix → push → re-request → wait → repeat until convergence.
+
+### Auto-merge convergence rule (preferred path)
+
+**If ALL of the following are true, MERGE WITHOUT ASKING and continue with the next task:**
+
+1. Local gates pass on the latest pushed commit (e.g. `node scripts/structure-check.mjs`, `composer test`, etc.).
+2. **All** CI checks on the PR head commit are `SUCCESS` (no `pending`, no `failure`, no required-but-skipped).
+3. The latest Copilot review has **0 inline review comments** AND its body indicates no new comments (e.g. "generated no new comments"), OR Copilot has approved the PR.
+4. The PR's REST `mergeable` field is `MERGEABLE` and `mergeStateStatus` is `CLEAN`.
+
+When all four are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorisation.
+
+**Do NOT auto-merge if:**
+
+- Any prior review still has unresolved actionable comments.
+- The PR touches secrets, credentials, infrastructure, deletions of historical commits, or anything that changes shared external systems beyond the repo itself.
+- The user has explicitly said "wait" or "do not merge" anywhere in the active conversation.
+- The branch base is not `main` (release branches still require explicit confirmation).
+
+When the rule applies but you bypass it for any of the above reasons, log the bypass reason in `docs/PROGRESS.md` so the audit trail is intact.
 
 ### Wait discipline (mandatory)
 
