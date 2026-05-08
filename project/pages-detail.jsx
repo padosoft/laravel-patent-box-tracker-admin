@@ -6,6 +6,9 @@ function PageDetail({ sessionId, onNavigate, live }) {
   const [drawerCommit, setDrawerCommit] = React.useState(null);
   const [drawerDossier, setDrawerDossier] = React.useState(null);
   const [drawerDossierLoading, setDrawerDossierLoading] = React.useState(false);
+  // Tracks the most recent onOpenDossier request so concurrent calls do not
+  // race to clear the loading state for the wrong request.
+  const dossierReqRef = React.useRef(0);
   const [integrity, setIntegrity] = React.useState(null);
   const [integrityLoading, setIntegrityLoading] = React.useState(false);
   const [renderingFormat, setRenderingFormat] = React.useState('json');
@@ -138,16 +141,15 @@ function PageDetail({ sessionId, onNavigate, live }) {
     // arriving after the drawer was closed or a different row clicked does
     // not overwrite the current state. We use a closure-captured id for
     // the comparison instead of ref-based tracking to keep the JSX portable.
-    const requestedId = row.id;
+    const reqId = ++dossierReqRef.current;
     setDrawerDossier({ ...row, _stale: true });
     setDrawerDossierLoading(true);
     try {
-      const response = await TrackerApi.getDossier(sessionId, requestedId);
-      // Guard: bail if the user closed the drawer or opened a different one.
+      const response = await TrackerApi.getDossier(sessionId, row.id);
+      // Guard: skip stale update if the user closed the drawer or opened a
+      // different dossier while this request was in-flight.
       setDrawerDossier((current) => {
-        if (!current || current.id !== requestedId) {
-          return current;
-        }
+        if (!current || current.id !== row.id) return current;
         if (!response.ok) {
           toast.push({
             kind: 'error',
@@ -160,11 +162,10 @@ function PageDetail({ sessionId, onNavigate, live }) {
         return { ...row, ...fresh };
       });
     } finally {
-      setDrawerDossierLoading((current) => {
-        // Only clear the loading flag if this request is still the active one.
-        void current;
-        return false;
-      });
+      // Only clear the loading flag for the request that triggered it.
+      if (dossierReqRef.current === reqId) {
+        setDrawerDossierLoading(false);
+      }
     }
   };
 
@@ -475,14 +476,7 @@ function DossiersTab({ dossiers, onDownload, onRender, onOpen }) {
               </div>
             </div>
             <span className="size">{PB.fmtBytes(d.byte_size || 0)}</span>
-            <button
-              className="btn sm ghost"
-              title="Open detail"
-              onClick={(e) => { e.stopPropagation(); onOpen?.(d); }}
-            >
-              <I.Copy size={11} />
-            </button>
-            <a
+            <
               href={onDownload ? onDownload(d.id) : '#'}
               className="btn sm"
               target="_blank"
