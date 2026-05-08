@@ -8,6 +8,7 @@
 - **PR #5 (`task-admin-integrity-and-dossier-detail`) — Macro 6.4 polish**, su istruzione dell'utente di chiudere la roadmap al 100%:
   - **6.4a integrity-check button**: `TrackerApi.verifySessionIntegrity(sessionId)` ora collegato al pulsante "Verify integrity" sul page-head di `pages-detail.jsx`. Il risultato è surfaced sia come toast immediato (verified head + commit_count, oppure first_failure row se il chain è rotto) sia come banner persistente sotto l'header con verified-at timestamp.
   - **6.4b dossier detail drawer**: nuovo componente `DossierDrawer` che consuma `TrackerApi.getDossier(sessionId, dossierId)` e mostra format/locale, SHA-256 completo (con copy), byte size, generated_at, storage path server-side, parent session id, link di download session-scoped. Il click su qualunque riga della tab Dossiers apre il drawer; il fetch live aggiorna la riga (fallback al payload locale se l'API è disabilitata).
+- **PR #5 merged** in `f9c46ef` (squash + delete-branch). Convergence check chiuso con `checks=pass`, `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`, unresolved threads risolti a `0`.
 - Roadmap snapshot aggiornata in `docs/ENTERPRISE_PLAN.md`: Macro 0–6 ora tutte ✅. Resta solo Macro 7.4 (Composer install path + tag `v1.0.0`).
 
 
