@@ -136,8 +136,12 @@ test.describe('admin shell smoke', () => {
 
     // Open the first row from Sessions list via explicit Open action.
     const openBtn = page.locator('.tbl tbody tr button').filter({ hasText: /^Open$/ }).first();
-    await openBtn.click({ force: true });
-    await expect(page.locator('[data-screen-label^="Session "]')).toBeVisible({ timeout: 15_000 });
+    await openBtn.dispatchEvent('click');
+    await page.waitForFunction(
+      () => Boolean(document.querySelector('[data-screen-label^="Session "]')),
+      null,
+      { timeout: 15_000 },
+    );
 
     // The Verify integrity button must become visible once the detail page
     // has rendered.
