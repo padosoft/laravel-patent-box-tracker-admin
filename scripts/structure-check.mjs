@@ -83,4 +83,13 @@ if (missingScripts.length > 0) {
   process.exit(1);
 }
 
-console.log('structure-check: ok (' + required.length + ' files, ' + expectedEndpoints.length + ' API endpoints, alias intact, ' + expectedScripts.length + ' scripts wired)');
+const missingScriptFiles = expectedScripts.filter((s) => !existsSync(join(repoRoot, 'project', s)));
+if (missingScriptFiles.length > 0) {
+  console.error('structure-check: index.html references scripts that are not on disk:');
+  for (const s of missingScriptFiles) {
+    console.error('  - project/' + s);
+  }
+  process.exit(1);
+}
+
+console.log('structure-check: ok (' + required.length + ' files, ' + expectedEndpoints.length + ' API endpoints, alias intact, ' + expectedScripts.length + ' scripts wired and resolved on disk)');

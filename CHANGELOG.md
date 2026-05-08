@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
-- Community-grade `README.md` with badge row, hero screenshot, full TOC, "Why this panel exists", architecture diagram, responsibility matrix, screenshots gallery (9 surfaces under `resources/screenshoots/`), install paths (drop-in static + planned Composer), quick start, configuration reference, operator workflows, full v1 endpoint mapping, security model, dedicated section for the included Claude Code vibe-coding pack, project layout, testing matrix, roadmap snapshot, contributing, license & credits.
+- Community-grade `README.md` with badge row, hero screenshot, full TOC, "Why this panel exists", architecture diagram, responsibility matrix, screenshots gallery covering every operator surface under `resources/screenshoots/`, install paths (drop-in static + planned Composer), quick start, configuration reference, operator workflows, full v1 endpoint mapping, security model, dedicated section for the included Claude Code vibe-coding pack, project layout, testing matrix, roadmap snapshot, contributing, license & credits.
 - `package.json` + `scripts/structure-check.mjs` baseline gate that validates the static prototype's required files, the `api-client.jsx` endpoint surface, the `invalid_repository → validation_failed` alias and the `index.html` script-tag wiring.
 - `scripts/serve.mjs` — zero-dep static server for local + Playwright runs.
 - `playwright.config.ts` + `tests/e2e/smoke.spec.ts` — minimal smoke harness asserting the shell boots without console errors and exposes the full `TrackerApi` surface on `window`.

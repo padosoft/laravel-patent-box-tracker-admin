@@ -27,8 +27,13 @@ const server = createServer(async (req, res) => {
     if (pathname === '/' || pathname === '') {
       pathname = '/index.html';
     }
-    const filePath = normalize(join(root, pathname));
-    if (!filePath.startsWith(root + sep) && filePath !== root) {
+    // Strip leading slash so path.join treats the request as a relative path
+    // anchored at `root`, then resolve to an absolute path to make the
+    // traversal guard correct on every OS (path.join would otherwise behave
+    // differently for inputs starting with a separator).
+    const relative = pathname.replace(/^\/+/, '');
+    const filePath = normalize(resolve(root, relative));
+    if (filePath !== root && !filePath.startsWith(root + sep)) {
       res.writeHead(403);
       res.end('forbidden');
       return;
