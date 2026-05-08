@@ -15,7 +15,19 @@ Read these first before code work:
 - Use macro/subtask branch model.
 - Update `docs/PROGRESS.md` during work and `docs/LESSON.md` for reusable learnings.
 - Request Copilot review on every PR and keep loop active until unresolved comments and CI are clean.
-- **Auto-merge on convergence — DO NOT pause to ask.** When local gates pass on the current PR head, every CI check is `pass` on that same head, the PR is `mergeable=MERGEABLE` + `mergeStateStatus=CLEAN`, no review thread is unresolved-and-not-outdated, AND the Copilot quiet/approval signal holds for a review filtered by ALL of these predicates simultaneously — `.user.login == "copilot-pull-request-reviewer[bot]"`, `.commit_id == headRefOid`, AND `.state` is `APPROVED` or `COMMENTED` (never `PENDING`, never `DISMISSED`) — and that surviving row is either `APPROVED` or has `0` inline comments AND a body matching the "no new comments" sentinel — run the squash merge with `--delete-branch` immediately, log the merge commit in `docs/PROGRESS.md`, and continue with the next subtask. Three non-negotiables: (a) a bare "0 inline comments" is NOT enough — always inspect the body/state too; (b) the review must be against the current head SHA — stale or older-commit reviews MUST NOT satisfy this gate; (c) the review must be from the canonical Copilot bot login AND in the `APPROVED`/`COMMENTED` state whitelist — a human review, a third-party bot, a `PENDING`, or a `DISMISSED` row MUST NOT satisfy the gate. Pausing the loop at convergence is a process bug. Full convergence definition, bypass conditions, and the merge command are in `docs/RULES.md` and `.claude/skills/copilot-pr-review-loop/SKILL.md`.
+- **Auto-merge on convergence — DO NOT pause to ask.** Run the squash merge with `--delete-branch` immediately, log the merge commit in `docs/PROGRESS.md`, and continue with the next subtask the moment all five conditions below hold simultaneously on the current PR head:
+  1. local gates pass on the current PR head;
+  2. every CI check is `pass` on that same head;
+  3. the latest Copilot review on HEAD has the quiet/approval signal — see the three non-negotiables below;
+  4. the PR is `mergeable=MERGEABLE` + `mergeStateStatus=CLEAN`;
+  5. no review thread is unresolved-and-not-outdated.
+
+  **Three non-negotiables on the Copilot signal (condition #3):**
+  - (a) a bare "0 inline comments" is NOT enough — the review state must be `APPROVED`, OR the body must match the "no new comments" sentinel;
+  - (b) the review must be against the current head SHA — stale or older-commit reviews MUST NOT satisfy this gate;
+  - (c) the review must be from the canonical Copilot bot login (`copilot-pull-request-reviewer[bot]`) AND in the `APPROVED`/`COMMENTED` state whitelist — a human review, a third-party bot, a `PENDING`, or a `DISMISSED` row MUST NOT satisfy the gate.
+
+  Pausing the loop at convergence is a process bug. Full convergence definition, bypass conditions, and the merge command are in `docs/RULES.md` and `.claude/skills/copilot-pr-review-loop/SKILL.md`.
 - Never mark a task complete without:
   - all local gates passing
   - PR with requested reviewers, active CI checks, and no unresolved actionable comments

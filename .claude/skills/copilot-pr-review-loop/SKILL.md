@@ -31,7 +31,7 @@ gh pr edit <PR> --add-reviewer @copilot
 gh api repos/<owner>/<repo>/pulls/<PR>/requested_reviewers --jq '.users[].login'
 ```
 
-The `Copilot` login (or `copilot-pull-request-reviewer[bot]` in older repos) must appear. The GraphQL `reviewRequests` field has different semantics (it returns review *requests*, but a re-requested review after a push may not appear there) — always cross-check with REST.
+For this repo the value MUST be exactly `Copilot` — see the asymmetry note in `docs/RULES.md` "Auto-merge convergence rule (preferred path)" condition #3 (login predicate): `/requested_reviewers .users[].login` returns `"Copilot"` while `/reviews .[].user.login` returns `"copilot-pull-request-reviewer[bot]"`, and the convergence filter operates on `/reviews`. The GraphQL `reviewRequests` field has different semantics (it returns review *requests*, but a re-requested review after a push may not appear there) — always cross-check with this REST endpoint.
 
 ## GraphQL fallback (if `gh pr edit --add-reviewer @copilot` fails)
 
@@ -102,7 +102,7 @@ If you arm a background monitor:
 3. Post a resolution map as a PR comment, mapping each comment id/path to the resolution.
 4. **Mark addressed threads as resolved via GraphQL.** The `isResolved` flag does not flip automatically when a fix lands — after a green push + resolution map post, mark every unresolved-not-outdated thread as resolved so the convergence gate can fire. Use the snippet below. If Copilot disagrees with a resolution, it will re-raise the concern as a new thread on the next review. The fetch is paginated with the same cap-and-fail-closed pattern as the convergence gate (5 windows × 100 nodes = 500 threads); if your PR has more, the script aborts with an explicit instruction to handle pagination, so the gate can still trust its own input.
 
-   **Permission prerequisite.** The `resolveReviewThread` mutation requires the authenticated `gh` token/account to have **write access** to the PR (i.e. push permission to the repository or be a maintainer with merge rights on the PR's branch). On a personal repo or a repo where the operator is a collaborator/maintainer this is satisfied by `gh auth login` — verify with `gh api user --jq '.login'` and confirm that login appears in the repo's collaborator list with write access. **If the token lacks write access**, the mutation returns an error like `"Resource not accessible by integration"` and the script visibly fails (no silent skipping); in that case treat condition #5 of the convergence gate as a **bypass** (do NOT auto-merge) and either (a) re-authenticate with a token that has write access, (b) ask a maintainer to resolve the threads manually, or (c) accept that this PR requires explicit user authorisation for the merge. Document the bypass reason in `docs/PROGRESS.md` per the canonical rule.
+   **Permission prerequisite.** The `resolveReviewThread` mutation requires the authenticated `gh` token/account to have **write access** to the PR (i.e. push permission to the repository or be a maintainer with merge rights on the PR's branch). On a personal repo or a repo where the operator is a collaborator/maintainer this is satisfied by `gh auth login` — verify with `gh api user --jq '.login'` and confirm that login appears in the repo's collaborator list with write access. **If the token lacks write access**, the mutation returns an error like `"Resource not accessible by integration"` and the script visibly fails (no silent skipping). When that happens, condition #5 of the convergence gate **cannot be satisfied** — the threads stay unresolved, `UNRESOLVED_THREADS` stays non-zero, and the merge guard fails closed. This is **not a canonical bypass** (the bypass list in `docs/RULES.md` is policy-driven; a permission failure is operational): the correct response is to (a) re-authenticate with a token that has write access, (b) ask a maintainer to resolve the threads manually, or (c) hand the merge over to the user with explicit authorisation, logging the operational reason ("resolveReviewThread denied — permission") in `docs/PROGRESS.md` so the audit trail records why the auto-path was abandoned for this PR.
 
    ```bash
    PR=<n>; REPO=<owner/repo>
@@ -380,14 +380,9 @@ After the merge:
 
 ## When NOT to auto-merge (bypass conditions)
 
-Auto-merge is the default. The canonical bypass list lives in [`docs/RULES.md` "Auto-merge convergence rule (preferred path)" → "Do NOT auto-merge if"](../../../docs/RULES.md). Read that list and treat it as the single source of truth — do not maintain a duplicate enumeration here. The list covers, at minimum:
+Auto-merge is the default. The canonical bypass list — names, exact phrase matchers, and edge cases — lives in [`docs/RULES.md` "Auto-merge convergence rule (preferred path)" → "Do NOT auto-merge if"](../../../docs/RULES.md). **Read RULES, not this section, for the operational decision.** This section deliberately does not enumerate the bypasses to keep the two documents from drifting; if you need the list, follow the link.
 
-- unresolved actionable comments from any prior review;
-- PRs that touch secrets, credentials, infrastructure, destructive history operations, or external systems beyond the repo;
-- explicit user instructions to halt (`"wait"`, `"stop"`, `"hold off"`, `"pause"`, `"do not merge"`, `"don't merge"`, or any clear synonym in the active conversation since the PR opened);
-- a base branch that is not `main`.
-
-When you bypass auto-merge for any of those reasons, log the bypass reason in `docs/PROGRESS.md` (one line, including PR number and the specific bypass that fired) so the audit trail is intact.
+When you bypass auto-merge, log the bypass reason in `docs/PROGRESS.md` (one line, including PR number and the specific bypass that fired) so the audit trail is intact.
 
 ## Common failures observed
 
