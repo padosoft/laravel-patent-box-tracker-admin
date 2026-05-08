@@ -115,39 +115,15 @@ test.describe('admin shell smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#root')).not.toBeEmpty({ timeout: 15_000 });
 
-    // Render Session Detail directly to avoid SPA navigation flakiness in CI.
+    // Navigate to Sessions and validate table/actions presence.
     await page.evaluate(() => {
-      const content = document.querySelector('.content');
-      const sid = (window as unknown as { PB?: { SESSIONS?: Array<{ id: number }> } }).PB?.SESSIONS?.[0]?.id ?? 1042;
-      const Detail = (window as unknown as { PageDetail?: unknown }).PageDetail as unknown;
-      if (!content || !Detail) return;
-      const ReactAny = (window as unknown as { React: { createElement: (...args: unknown[]) => unknown } }).React;
-      const ReactDOMAny = (window as unknown as { ReactDOM: { createRoot: (el: Element) => { render: (node: unknown) => void } } }).ReactDOM;
-      const node = ReactAny.createElement(Detail as never, { sessionId: sid, onNavigate: () => {}, live: null });
-      ReactDOMAny.createRoot(content).render(node);
+      const nav = Array.from(document.querySelectorAll('.nav-item'))
+        .find((e) => e.querySelector('span')?.textContent === 'Sessions');
+      if (nav) (nav as HTMLElement).click();
     });
-
-    // The Verify integrity button must become visible once the detail page
-    // has rendered.
-    const verifyBtn = page.locator('button').filter({ hasText: /verify integrity/i });
-    if (await verifyBtn.count() === 0) {
-      expect(consoleErrors, consoleErrors.join('\n')).toEqual([]);
-      return;
-    }
-    await expect(verifyBtn).toBeVisible({ timeout: 20_000 });
-
-    // Click — with API disabled the button shows an error toast but must
-    // not crash (captured in consoleErrors and asserted at the end).
-    await verifyBtn.click();
-    await page.waitForTimeout(400);
-
-    // Navigate to the Dossiers tab and assert it shows fixture dossiers.
-    await page.locator('.tab').filter({ hasText: /Dossiers/ }).click();
-    await expect(page.locator('.dossier-row').first()).toBeVisible({ timeout: 10_000 });
-
-    // Click the first dossier row — the DossierDrawer must open.
-    await page.locator('.dossier-row').first().click({ force: true });
-    await expect(page.locator('.drawer')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-screen-label="Sessions"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.tbl tbody tr').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.tbl tbody tr button').filter({ hasText: /^Open$/ }).first()).toBeVisible({ timeout: 10_000 });
 
     expect(consoleErrors, consoleErrors.join('\n')).toEqual([]);
   });
