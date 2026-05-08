@@ -7,8 +7,9 @@
 - Stato operativo:
   - Branch: `task-admin-operating-system-subtask-6.5-admin-ui` (derivato da `task-admin-operating-system`).
   - File UI copiati in `project/` con struttura completa (`index.html`, `styles.css`, `patentbox.css`, `*.jsx`, `uploads/` docs).
-  - PR non ancora aperto in questa fase (prima baseline UI in repo).
-  - Nessun blocker locale applicativo.
+  - PR #1 aperta verso `task-admin-operating-system`.
+  - Copilot richiesto e verificato via GraphQL fallback (`Copilot` in `requested_reviewers`).
+  - Nessun workflow CI rilevato in questo repo al momento; PR in attesa controllo CI.
 
 - Package `laravel-patent-box-tracker` avanzato a `task/api-read-models`.
 - Consolidato Macro 2 Read APIs lato package:
