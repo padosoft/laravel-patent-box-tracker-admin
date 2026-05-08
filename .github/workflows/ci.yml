@@ -28,8 +28,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - name: Install dependencies
+      - name: Install dependencies (skip Playwright browser auto-download)
         run: npm ci --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
       - name: Run smoke suite

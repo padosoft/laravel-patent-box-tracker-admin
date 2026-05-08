@@ -1,7 +1,28 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+// The api-client treats `localStorage.__PB_ADMIN_API_CONFIG__` as the source
+// of truth for `baseUrl`, `token` and `enabled`, overriding query-string
+// values when both are present. If the test runner ever shares storage state
+// with a developer who previously stored `enabled: true`, the smoke would
+// start hitting a live API and fail with console errors. Force a clean state
+// in every test by writing the storage key from the bootstrap script — that
+// runs before any page script, including api-client.jsx.
+async function forceApiDisabled(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem(
+        '__PB_ADMIN_API_CONFIG__',
+        JSON.stringify({ baseUrl: '/api/patent-box', token: null, enabled: false }),
+      );
+    } catch {
+      // Ignore — the test still passes ?apiEnabled=0 as a second guard.
+    }
+  });
+}
 
 test.describe('admin shell smoke', () => {
   test('boots the static prototype with API disabled and reaches the dashboard', async ({ page }) => {
+    await forceApiDisabled(page);
     const consoleErrors: string[] = [];
     page.on('pageerror', (err) => consoleErrors.push(err.message));
     page.on('console', (msg) => {
@@ -43,6 +64,7 @@ test.describe('admin shell smoke', () => {
   });
 
   test('exposes the API client globals on window', async ({ page }) => {
+    await forceApiDisabled(page);
     await page.goto('/?apiEnabled=0');
     await page.waitForFunction(() => typeof (window as unknown as { TrackerApi?: unknown }).TrackerApi !== 'undefined', null, {
       timeout: 15_000,

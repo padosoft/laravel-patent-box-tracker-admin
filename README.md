@@ -276,11 +276,13 @@ That's the full audit-grade flow, from `git log` to *documentazione idonea*-read
 
 ## Configuration reference
 
-The admin reads its runtime config from (in order of precedence):
+The admin reads its runtime config from these sources, with the actual resolution order applied by `project/api-client.jsx`:
 
-1. **Query string** — `?apiBase=…`, `?apiToken=…`, `?apiTimeout=30000`, `?apiEnabled=0|1`. The query string is parsed on every navigation but currently never written back: tokens placed in the URL stay visible in the address bar, browser history and `Referer` headers, so prefer the storage path below for anything sensitive.
-2. **`localStorage`** — key `__PB_ADMIN_API_CONFIG__`, JSON `{baseUrl, token, enabled}`. The current static baseline only **reads** this key (e.g. `localStorage.setItem('__PB_ADMIN_API_CONFIG__', JSON.stringify({baseUrl: '…', token: '…', enabled: true}))` from devtools). `apiTimeout` is not yet read from storage and falls back to the built-in default; both behaviours are tracked for the Macro 6 polish slice in `docs/ENTERPRISE_PLAN.md`.
-3. **Built-in defaults** — `baseUrl=/api/patent-box`, `timeoutMs=30000`, `enabled=true`.
+1. **Built-in defaults** — `baseUrl=/api/patent-box`, `timeoutMs=30000`, `enabled=true`. The seed values used when nothing else is provided.
+2. **Query string** — `?apiBase=…`, `?apiToken=…`, `?apiTimeout=30000`, `?apiEnabled=0|1`. Parsed on every navigation but **never written back**: tokens placed in the URL stay visible in the address bar, browser history and `Referer` headers, so prefer the storage path below for anything sensitive.
+3. **`localStorage`** (highest precedence for `baseUrl`, `token`, `enabled`) — key `__PB_ADMIN_API_CONFIG__`, JSON `{baseUrl, token, enabled}`. When this key is present, its values **override** anything passed via the query string for those three fields. `apiTimeout` is currently not loaded from storage and always uses the query-string value or the built-in default. The static baseline only **reads** the storage key — populate it manually from devtools, e.g. `localStorage.setItem('__PB_ADMIN_API_CONFIG__', JSON.stringify({baseUrl: '…', token: '…', enabled: true}))`. A settings form that writes the key is tracked for the Macro 6 polish slice in `docs/ENTERPRISE_PLAN.md`.
+
+**Practical implication:** if you pass `?apiToken=…&apiBase=…` to bootstrap a fresh browser session, those values are picked up. As soon as the storage key exists, however, the storage values win — so an existing token in `localStorage` will be used even if a new one is provided in the URL. Clear the storage key (`localStorage.removeItem('__PB_ADMIN_API_CONFIG__')`) before re-bootstrapping with new URL params.
 
 The base URL is normalised: if it does not already end with `/v1`, the suffix is appended automatically. This means the same value works whether you point at `/api/patent-box` or `/api/patent-box/v1`.
 
