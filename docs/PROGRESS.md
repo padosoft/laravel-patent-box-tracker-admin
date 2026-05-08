@@ -2,6 +2,18 @@
 
 ## 2026-05-08
 
+- Stato admin aggiornato su `main`:
+  - PR #1 (`task-admin-operating-system-subtask-6.5-admin-ui` -> `task-admin-operating-system`) mergeata.
+  - PR #2 (`task-admin-operating-system` -> `main`) aperta e merged.
+  - Stato PR attivo: nessuna PR aperta.
+- Stato subtask:
+  - `subtask 6.5` (import design baseline) chiuso.
+  - Passo successivo: avvio Macro 5 (API client + session bootstrap) su admin, con prima attività di scaffold types + polling schema.
+- Copilot:
+  - richiesta valida su PR #2 confermata.
+
+## 2026-05-08
+
 - Stato subtask admin: `task-admin-operating-system-subtask-6.5-admin-ui` in corso.
 - Obiettivo subtask: importare base UI dal design locale `patent-box-admin-panel/project` e attivare i file sorgenti operativi (`index.html`, `app.jsx`, `shell.jsx`, `pages-*.jsx`, CSS).
 - Stato operativo:
