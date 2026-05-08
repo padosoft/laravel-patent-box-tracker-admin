@@ -141,10 +141,14 @@ LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
        | [.[]
            | select(.user.login=="copilot-pull-request-reviewer[bot]")
            | select(.commit_id==$sha)
-           | select(.state!="PENDING")]
+           | select(.state=="APPROVED" or .state=="COMMENTED")]
        | sort_by(.submitted_at) | last // empty')
+# State whitelist: only APPROVED or COMMENTED count as a quiet/approval
+# signal. PENDING is in-flight; DISMISSED has been explicitly invalidated
+# by a maintainer and MUST NOT satisfy the convergence gate; other future
+# states (CHANGES_REQUESTED) are by definition non-quiet.
 if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
-  echo "[gate] no Copilot review for HEAD ($HEAD_SHA) yet — convergence NOT reached"
+  echo "[gate] no eligible Copilot review for HEAD ($HEAD_SHA) yet — convergence NOT reached"
   COPILOT_COMMENTS="unknown"
   COPILOT_STATE="absent"
   COPILOT_BODY=""
@@ -194,14 +198,17 @@ fi
 #    Copilot review of an older commit does not satisfy the gate.
 HEAD_SHA=$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')
 
-# 3. Copilot signal — anchored to HEAD_SHA via commit_id, paginated, slurped.
+# 3. Copilot signal — anchored to HEAD_SHA via commit_id, state-whitelisted
+#    (APPROVED or COMMENTED only — PENDING is in-flight, DISMISSED has been
+#    explicitly invalidated, CHANGES_REQUESTED is non-quiet by definition),
+#    paginated, slurped.
 LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
   | jq -s --arg sha "$HEAD_SHA" \
       'add
        | [.[]
            | select(.user.login=="copilot-pull-request-reviewer[bot]")
            | select(.commit_id==$sha)
-           | select(.state!="PENDING")]
+           | select(.state=="APPROVED" or .state=="COMMENTED")]
        | sort_by(.submitted_at) | last // empty')
 if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
   COPILOT_COMMENTS="unknown"
@@ -233,9 +240,9 @@ if [ "$LOCAL_GATES_OK" = "1" ] \
    && [ "$MERGE_STATE" = "CLEAN" ] \
    && { [ "$COPILOT_STATE" = "APPROVED" ] \
         || { [ "$COPILOT_COMMENTS" = "0" ] && grep -q "no new comments" <<<"$COPILOT_BODY"; }; }; then
-  gh pr merge "$PR" --repo "$REPO" --squash --delete-branch \
-    --subject "<short PR title> (#<PR>)" \
-    --body "<one-paragraph summary + 'Review trail: N rounds, M comments, final 0/CLEAN'>"
+  # Drop --subject/--body so the merge commit reuses the PR title and body
+  # set on GitHub. Override only if the caller has a derived subject ready.
+  gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
 else
   echo "[gate] convergence not reached — do not merge"
   printf '  HEAD_SHA=%s\n  LOCAL_GATES_OK=%s\n  CI_ALL_PASS=%s\n  MERGEABLE=%s\n  MERGE_STATE=%s\n  COPILOT_STATE=%s\n  COPILOT_COMMENTS=%s\n' \
