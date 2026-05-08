@@ -71,7 +71,7 @@ gh pr edit <PR> --add-reviewer @copilot
 4. The PR is mergeable. Use `gh pr view <PR> --json mergeable,mergeStateStatus` (which surfaces GitHub's GraphQL fields) and require `mergeable=MERGEABLE` and `mergeStateStatus=CLEAN`. The REST endpoint exposes the same signal under different names (`mergeable: true` and `mergeable_state: "clean"`); pick one API and match the field names to it.
 5. **Zero unresolved review threads.** Query `repository.pullRequest.reviewThreads` via GraphQL and count nodes where `isResolved == false AND isOutdated == false`. The count must be `0` (with pagination handled — see the executable form in `.claude/skills/copilot-pr-review-loop/SKILL.md`, which fails the gate if more pages remain than the cap allows). Outdated threads (no longer applying to the current diff after a force/rebase push) are safe to ignore; non-outdated unresolved threads from any prior reviewer (Copilot, codex bot, human) MUST block auto-merge. Threads that were addressed in a fix commit are NOT auto-resolved by GitHub — the SKILL's "Closing the loop" step requires programmatically marking them resolved via the `resolveReviewThread` mutation after each fix push so this gate can fire.
 
-When all five are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorisation.
+When all five are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorization.
 
 **Do NOT auto-merge if any of the following hold (canonical bypass list — `.claude/skills/copilot-pr-review-loop/SKILL.md` defers to this list):**
 
@@ -86,7 +86,7 @@ When the rule applies but you bypass it for any of the above reasons, log the by
 
 - A background monitor is a helper, not a guarantee. After re-requesting Copilot following a fix push, ALWAYS cross-check the review state by REST every 5–10 minutes of conversation activity. The exact query is in `.claude/skills/copilot-pr-review-loop/SKILL.md`.
 - **Soft cap: 15 minutes** after the most recent re-request — if Copilot has not submitted, run the REST query, do not assume "still in flight".
-- **Hard cap: 30 minutes** — escalate to the user, run the REST query, decide between re-request or proceeding with merge per explicit user authorisation.
+- **Hard cap: 30 minutes** — escalate to the user, run the REST query, decide between re-request or proceeding with merge per explicit user authorization.
 - When the user pings asking "what's happening?", treat it as a forced manual-check trigger: run the REST query before answering, do not summarise from the last monitor event.
 
 ## Test Standards

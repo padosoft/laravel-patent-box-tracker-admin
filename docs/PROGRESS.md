@@ -75,7 +75,7 @@
 
 - Stato admin aggiornato su `main`:
   - PR #1 (`task-admin-operating-system-subtask-6.5-admin-ui` -> `task-admin-operating-system`) merged.
-  - PR #2 (`task-admin-operating-system` -> `main`) aperta e merged.
+  - PR #2 (`task-admin-operating-system` -> `main`) opened and merged.
   - Stato PR attivo: nessuna PR aperta.
 - Stato subtask:
   - `subtask 6.5` (import design baseline) chiuso.

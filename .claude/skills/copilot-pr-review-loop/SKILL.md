@@ -67,7 +67,7 @@ A background monitor is a *helper*, not a guarantee. Background scripts can stal
    Note the latest `submitted_at` per bot. If a Copilot row appears with `submitted_at` newer than the last fix-push commit, the review landed — read it now, do not wait for the monitor.
 
 3. **Soft cap: 15 minutes after the most recent re-request.** If Copilot has not submitted by 15 minutes, the monitor is suspect — run the manual check, do not assume "still in flight" for hours.
-4. **Hard cap: 30 minutes.** If Copilot has not responded by 30 minutes, escalate: tell the user, run the manual check one more time, and either re-request Copilot or proceed with merge per user authorisation.
+4. **Hard cap: 30 minutes.** If Copilot has not responded by 30 minutes, escalate: tell the user, run the manual check one more time, and either re-request Copilot or proceed with merge per user authorization.
 5. **Never wait silently across a user turn.** If the user comes back and asks "what's happening", treat that as a forced manual-check trigger — you must run the REST query before answering, never just look at the last monitor event.
 
 ## Reading a Copilot review
@@ -102,7 +102,7 @@ If you arm a background monitor:
 3. Post a resolution map as a PR comment, mapping each comment id/path to the resolution.
 4. **Mark addressed threads as resolved via GraphQL.** The `isResolved` flag does not flip automatically when a fix lands — after a green push + resolution map post, mark every unresolved-not-outdated thread as resolved so the convergence gate can fire. Use the snippet below. If Copilot disagrees with a resolution, it will re-raise the concern as a new thread on the next review. The fetch is paginated with the same cap-and-fail-closed pattern as the convergence gate (5 windows × 100 nodes = 500 threads); if your PR has more, the script aborts with an explicit instruction to handle pagination, so the gate can still trust its own input.
 
-   **Permission prerequisite.** The `resolveReviewThread` mutation requires the authenticated `gh` token/account to have **write access** to the PR (i.e. push permission to the repository or be a maintainer with merge rights on the PR's branch). On a personal repo or a repo where the operator is a collaborator/maintainer this is satisfied by `gh auth login` — verify with `gh api user --jq '.login'` and confirm that login appears in the repo's collaborator list with write access. **If the token lacks write access**, the mutation returns an error like `"Resource not accessible by integration"` and the script visibly fails (no silent skipping). When that happens, condition #5 of the convergence gate **cannot be satisfied** — the threads stay unresolved, `UNRESOLVED_THREADS` stays non-zero, and the merge guard fails closed. This is **not a canonical bypass** (the bypass list in `docs/RULES.md` is policy-driven; a permission failure is operational): the correct response is to (a) re-authenticate with a token that has write access, (b) ask a maintainer to resolve the threads manually, or (c) hand the merge over to the user with explicit authorisation, logging the operational reason ("resolveReviewThread denied — permission") in `docs/PROGRESS.md` so the audit trail records why the auto-path was abandoned for this PR.
+   **Permission prerequisite.** The `resolveReviewThread` mutation requires the authenticated `gh` token/account to have **write access** to the PR (i.e. push permission to the repository or be a maintainer with merge rights on the PR's branch). On a personal repo or a repo where the operator is a collaborator/maintainer this is satisfied by `gh auth login` — verify with `gh api user --jq '.login'` and confirm that login appears in the repo's collaborator list with write access. **If the token lacks write access**, the mutation returns an error like `"Resource not accessible by integration"` and the script visibly fails (no silent skipping). When that happens, condition #5 of the convergence gate **cannot be satisfied** — the threads stay unresolved, `UNRESOLVED_THREADS` stays non-zero, and the merge guard fails closed. This is **not a canonical bypass** (the bypass list in `docs/RULES.md` is policy-driven; a permission failure is operational): the correct response is to (a) re-authenticate with a token that has write access, (b) ask a maintainer to resolve the threads manually, or (c) hand the merge over to the user with explicit authorization, logging the operational reason ("resolveReviewThread denied — permission") in `docs/PROGRESS.md` so the audit trail records why the auto-path was abandoned for this PR.
 
    ```bash
    PR=<n>; REPO=<owner/repo>
@@ -140,18 +140,27 @@ If you arm a background monitor:
      RESOLVE_CURSOR=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
      [ "$HAS_NEXT" = "true" ] || break
    done
+   RESOLVE_FAILED=0
    for tid in $THREAD_IDS; do
      [ -z "$tid" ] && continue
-     gh api graphql -F threadId="$tid" -f query='
+     if ! gh api graphql -F threadId="$tid" -f query='
        mutation($threadId:ID!){
          resolveReviewThread(input:{threadId:$threadId}){ thread{ id isResolved } }
-       }' --jq '.data.resolveReviewThread.thread | "resolved \(.id)"'
+       }' --jq '.data.resolveReviewThread.thread | "resolved \(.id)"'; then
+       echo "[abort] resolveReviewThread failed for $tid — likely a permission or transport error" >&2
+       RESOLVE_FAILED=1
+       break
+     fi
    done
+   if [ "$RESOLVE_FAILED" = "1" ]; then
+     echo "[abort] thread resolution incomplete; convergence condition #5 will fail closed. See the Permission prerequisite block below." >&2
+     exit 1
+   fi
    ```
 
 5. Re-request Copilot via the primary command and verify in `requested_reviewers`.
 6. Restart the wait.
-7. **Auto-merge when convergence is reached** (default path — see below). Do NOT pause to ask for authorisation when the **five** convergence conditions all hold (local gates green, CI green, Copilot quiet on HEAD with the full filter, PR mergeable+clean, no unresolved review threads); pausing the loop is a bug, not caution.
+7. **Auto-merge when convergence is reached** (default path — see below). Do NOT pause to ask for authorization when the **five** convergence conditions all hold (local gates green, CI green, Copilot quiet on HEAD with the full filter, PR mergeable+clean, no unresolved review threads); pausing the loop is a bug, not caution.
 
 ## Convergence detection (when to auto-merge)
 
@@ -376,7 +385,7 @@ After the merge:
 
 1. Confirm with `gh pr view <PR> --json state,mergedAt,mergeCommit` (state must be `MERGED`).
 2. Append a one-line entry to `docs/PROGRESS.md` with the merge commit SHA and a 1-sentence outcome.
-3. Continue with the next macro/subtask. Do **not** stop the session for confirmation — the convergence rule already authorised the action.
+3. Continue with the next macro/subtask. Do **not** stop the session for confirmation — the convergence rule already authorized the action.
 
 ## When NOT to auto-merge (bypass conditions)
 
