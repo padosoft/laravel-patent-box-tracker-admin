@@ -308,16 +308,35 @@ THREADS_UNRESOLVED_TOTAL=0
 THREADS_CURSOR=""
 THREADS_PAGES=0
 THREADS_OVERFLOW=0
+THREADS_API_FAILED=0
 while :; do
   THREADS_PAGES=$((THREADS_PAGES + 1))
   if [ "$THREADS_PAGES" -gt 5 ]; then
     THREADS_OVERFLOW=1
     break
   fi
+  # Do NOT suppress stderr: an auth/network/rate-limit failure must surface
+  # so the gate fails closed. The exit status of `gh api graphql` is checked
+  # below; on non-zero we set the API-failed sentinel and break.
   if [ -z "$THREADS_CURSOR" ]; then
-    PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query="$THREADS_QUERY" 2>/dev/null)
+    PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query="$THREADS_QUERY")
+    GH_STATUS=$?
   else
-    PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -F cursor="$THREADS_CURSOR" -f query="$THREADS_QUERY" 2>/dev/null)
+    PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -F cursor="$THREADS_CURSOR" -f query="$THREADS_QUERY")
+    GH_STATUS=$?
+  fi
+  if [ "$GH_STATUS" -ne 0 ] || [ -z "$PAGE_JSON" ]; then
+    THREADS_API_FAILED=1
+    break
+  fi
+  # Validate the response shape too — an empty .data or missing
+  # reviewThreads object is treated as a failure, not as zero unresolved.
+  PAGE_NODES_OK=$(echo "$PAGE_JSON" | jq -r '
+    if (.data.repository.pullRequest.reviewThreads.nodes // null) == null
+    then "no" else "yes" end')
+  if [ "$PAGE_NODES_OK" != "yes" ]; then
+    THREADS_API_FAILED=1
+    break
   fi
   PAGE_COUNT=$(echo "$PAGE_JSON" | jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false)] | length')
   THREADS_UNRESOLVED_TOTAL=$((THREADS_UNRESOLVED_TOTAL + PAGE_COUNT))
@@ -325,7 +344,9 @@ while :; do
   THREADS_CURSOR=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""')
   [ "$HAS_NEXT" = "true" ] || break
 done
-if [ "$THREADS_OVERFLOW" = "1" ]; then
+if [ "$THREADS_API_FAILED" = "1" ]; then
+  UNRESOLVED_THREADS="api_failed"
+elif [ "$THREADS_OVERFLOW" = "1" ]; then
   UNRESOLVED_THREADS="paginated"
 else
   UNRESOLVED_THREADS="$THREADS_UNRESOLVED_TOTAL"
