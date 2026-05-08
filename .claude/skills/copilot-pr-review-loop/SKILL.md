@@ -106,12 +106,13 @@ If you arm a background monitor:
 
 ## Convergence detection (when to auto-merge)
 
-The loop is converged — and you MUST merge automatically — when ALL four of these hold on the same PR head commit:
+The loop is converged — and you MUST merge automatically — when ALL five of these hold on the same PR head commit:
 
 1. **Local gates green** — the gates declared in this repo (e.g. `node scripts/structure-check.mjs`, `composer test`, `npm run e2e`) pass when run against the latest pushed commit.
 2. **CI green** — every check in `gh pr checks <PR>` is `pass`/`SUCCESS`. No `pending`, no `failure`, no required-but-skipped.
-3. **Copilot quiet — for the current head commit only** — the latest Copilot review whose `commit_id == headRefOid` AND whose `state` is `APPROVED` or `COMMENTED` (never `PENDING`, never `DISMISSED`) has **0 inline review comments** AND its review body indicates no new comments (e.g. `"generated no new comments"`), OR that head-anchored review state is `APPROVED`. A Copilot review submitted against an older commit MUST be ignored, even if it is the most recent one returned by the API.
+3. **Copilot quiet — for the current head commit only** — the latest review whose `.user.login == "copilot-pull-request-reviewer[bot]"` AND `.commit_id == headRefOid` AND `.state` is `APPROVED` or `COMMENTED` (never `PENDING`, never `DISMISSED`) has **0 inline review comments** AND its review body indicates no new comments (e.g. `"generated no new comments"`), OR that head-anchored review state is `APPROVED`. The login filter is non-negotiable: a human or third-party bot review on HEAD MUST NOT be treated as the Copilot quiet/approval signal. A Copilot review submitted against an older commit MUST also be ignored, even if it is the most recent one returned by the API.
 4. **PR mergeable** — `gh pr view <PR> --json mergeable,mergeStateStatus` returns `mergeable=MERGEABLE` and `mergeStateStatus=CLEAN`.
+5. **No unresolved review threads** — `repository.pullRequest.reviewThreads` (GraphQL) has zero nodes with `isResolved=false AND isOutdated=false`. Outdated threads (no longer applying to the current diff after a force/rebase push) are safe to ignore; non-outdated unresolved threads from any prior review (Copilot, codex bot, human) MUST block auto-merge per the canonical bypass list in `docs/RULES.md`.
 
 Detection query:
 
@@ -233,11 +234,28 @@ CI_ALL_PASS=$(gh pr view "$PR" --repo "$REPO" --json statusCheckRollup \
 MERGEABLE=$(gh pr view "$PR" --repo "$REPO" --json mergeable --jq '.mergeable')
 MERGE_STATE=$(gh pr view "$PR" --repo "$REPO" --json mergeStateStatus --jq '.mergeStateStatus')
 
+# 6. Unresolved review threads — the canonical bypass list in docs/RULES.md
+#    says "any prior review still has unresolved actionable comments" must
+#    block auto-merge. Enforce it executable-side via GraphQL: count threads
+#    where isResolved=false AND isOutdated=false (outdated threads no longer
+#    apply to the current diff and are safe to ignore).
+UNRESOLVED_THREADS=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query='
+  query($owner:String!,$repo:String!,$pr:Int!){
+    repository(owner:$owner,name:$repo){
+      pullRequest(number:$pr){
+        reviewThreads(first:100){
+          nodes{ isResolved isOutdated }
+        }
+      }
+    }
+  }' --jq '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false)] | length' 2>/dev/null || echo "unknown")
+
 # Final guard — re-evaluate every condition as one expression.
 if [ "$LOCAL_GATES_OK" = "1" ] \
    && [ "$CI_ALL_PASS" = "1" ] \
    && [ "$MERGEABLE" = "MERGEABLE" ] \
    && [ "$MERGE_STATE" = "CLEAN" ] \
+   && [ "$UNRESOLVED_THREADS" = "0" ] \
    && { [ "$COPILOT_STATE" = "APPROVED" ] \
         || { [ "$COPILOT_COMMENTS" = "0" ] && grep -q "no new comments" <<<"$COPILOT_BODY"; }; }; then
   # Drop --subject/--body so the merge commit reuses the PR title and body
@@ -245,8 +263,8 @@ if [ "$LOCAL_GATES_OK" = "1" ] \
   gh pr merge "$PR" --repo "$REPO" --squash --delete-branch
 else
   echo "[gate] convergence not reached — do not merge"
-  printf '  HEAD_SHA=%s\n  LOCAL_GATES_OK=%s\n  CI_ALL_PASS=%s\n  MERGEABLE=%s\n  MERGE_STATE=%s\n  COPILOT_STATE=%s\n  COPILOT_COMMENTS=%s\n' \
-    "$HEAD_SHA" "$LOCAL_GATES_OK" "$CI_ALL_PASS" "$MERGEABLE" "$MERGE_STATE" "$COPILOT_STATE" "$COPILOT_COMMENTS"
+  printf '  HEAD_SHA=%s\n  LOCAL_GATES_OK=%s\n  CI_ALL_PASS=%s\n  MERGEABLE=%s\n  MERGE_STATE=%s\n  UNRESOLVED_THREADS=%s\n  COPILOT_STATE=%s\n  COPILOT_COMMENTS=%s\n' \
+    "$HEAD_SHA" "$LOCAL_GATES_OK" "$CI_ALL_PASS" "$MERGEABLE" "$MERGE_STATE" "$UNRESOLVED_THREADS" "$COPILOT_STATE" "$COPILOT_COMMENTS"
 fi
 ```
 
