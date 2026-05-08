@@ -123,9 +123,14 @@ node scripts/structure-check.mjs
 echo "=== CI ==="
 gh pr checks $PR --repo $REPO
 echo "=== latest Copilot review ==="
+# IMPORTANT: `gh api --paginate --jq '...'` applies the jq filter PER PAGE
+# and emits one result per page, which would concatenate JSON objects (for
+# `LATEST`) or produce multiple length integers (for `COPILOT_COMMENTS`).
+# Drop --jq from the gh call and slurp all pages into a single array via
+# `jq -s 'add'` first, then run the actual filter once on the merged array.
 LATEST=$(gh api --paginate "repos/$REPO/pulls/$PR/reviews" \
-  --jq '[.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last // empty')
-if [ -z "$LATEST" ]; then
+  | jq -s 'add | [.[] | select(.user.login=="copilot-pull-request-reviewer[bot]")] | sort_by(.submitted_at) | last // empty')
+if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
   echo "[gate] no Copilot review yet — convergence NOT reached"
   COPILOT_COMMENTS="unknown"
   COPILOT_STATE="absent"
@@ -135,10 +140,9 @@ else
   REVIEW_ID=$(echo "$LATEST" | jq -r '.id')
   COPILOT_STATE=$(echo "$LATEST" | jq -r '.state')
   COPILOT_BODY=$(echo "$LATEST" | jq -r '.body // ""')
-  # --paginate handles PRs with >100 review comments. The double quoting on
-  # the jq filter is required because the review id is interpolated.
+  # Slurp every page of comments into one array, then filter and count once.
   COPILOT_COMMENTS=$(gh api --paginate "repos/$REPO/pulls/$PR/comments" \
-    --jq "[.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
+    | jq -s "add | [.[] | select(.pull_request_review_id==$REVIEW_ID)] | length")
 fi
 echo "Copilot inline comments on latest review: $COPILOT_COMMENTS"
 echo "Copilot review state: $COPILOT_STATE"
