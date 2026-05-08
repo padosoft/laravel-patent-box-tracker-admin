@@ -476,7 +476,7 @@ function DossiersTab({ dossiers, onDownload, onRender, onOpen }) {
               </div>
             </div>
             <span className="size">{PB.fmtBytes(d.byte_size || 0)}</span>
-            <
+            <a
               href={onDownload ? onDownload(d.id) : '#'}
               className="btn sm"
               target="_blank"
