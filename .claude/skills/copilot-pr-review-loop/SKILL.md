@@ -262,6 +262,17 @@ Run this only after the convergence checks above have all passed — including t
 ```bash
 # Inputs: $PR, $REPO. Replace `node scripts/structure-check.mjs` with the
 # repo's local gate command (e.g. composer test, npm run test, ...).
+#
+# !!! BYPASS-LIST WARNING !!!
+# This script ONLY enforces the five mechanical convergence conditions
+# (local gates + CI + Copilot quiet on HEAD + mergeable + zero unresolved
+# threads). It does NOT — and cannot — evaluate the policy bypass list
+# from docs/RULES.md (secrets/infra/destructive ops, "wait"/"stop"/etc.
+# from the user, non-main base, unaddressed-by-design comments). Before
+# running this snippet on any PR, the caller MUST have manually
+# confirmed that none of those bypass conditions fire. Auto-merging a
+# PR that satisfies the five mechanical conditions but violates a
+# policy bypass is a process bug — read docs/RULES.md first.
 PR=<n>; REPO=<owner/repo>
 
 # 1. Local gates
