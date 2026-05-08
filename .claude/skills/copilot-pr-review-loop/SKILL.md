@@ -123,9 +123,8 @@ If you arm a background monitor:
    while :; do
      RESOLVE_PAGES=$((RESOLVE_PAGES + 1))
      if [ "$RESOLVE_PAGES" -gt 5 ]; then
-       echo "[abort] reviewThreads exceeded 5 pages of 100; resolve manually or extend the cap" >&2
-       THREAD_IDS=""
-       break
+       echo "[abort] reviewThreads exceeded 5 pages of 100 — failing closed; resolve manually or extend the cap" >&2
+       exit 1
      fi
      # Same fail-closed pattern as the convergence gate: capture exit code,
      # validate response shape, abort on any failure rather than silently
