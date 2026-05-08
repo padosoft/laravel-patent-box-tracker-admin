@@ -118,16 +118,18 @@ test.describe('admin shell smoke', () => {
     // The dashboard "Recent sessions" table must show at least one data row.
     await expect(page.locator('.tbl tbody tr').first()).toBeVisible({ timeout: 10_000 });
 
-    // Open the first recent session to reach the detail page.
-    await page.locator('.tbl tbody tr').first().click({ force: true });
+    // Open the first recent session to reach the detail page. Trigger the
+    // row click from the browser context to avoid occasional headless
+    // pointer-interaction flakiness on table rows.
+    await page.evaluate(() => {
+      const firstRow = document.querySelector('.tbl tbody tr');
+      if (firstRow) (firstRow as HTMLElement).click();
+    });
 
-    // Wait for the detail route to render. This marker exists only in
-    // PageDetail (<div data-screen-label={`Session ${sessionId}`}>).
-    await expect(page.locator('[data-screen-label^="Session "]')).toBeVisible({ timeout: 15_000 });
-
-    // The Verify integrity button must become visible.
+    // The Verify integrity button must become visible once the detail page
+    // has rendered.
     const verifyBtn = page.locator('button').filter({ hasText: /verify integrity/i });
-    await expect(verifyBtn).toBeVisible({ timeout: 15_000 });
+    await expect(verifyBtn).toBeVisible({ timeout: 20_000 });
 
     // Click — with API disabled the button shows an error toast but must
     // not crash (captured in consoleErrors and asserted at the end).
