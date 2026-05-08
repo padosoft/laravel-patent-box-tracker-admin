@@ -115,6 +115,16 @@ test.describe('admin shell smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#root')).not.toBeEmpty({ timeout: 15_000 });
 
+    // Force FY filter to "all" so the Sessions table always has fixture rows.
+    await page.evaluate(() => {
+      const selects = Array.from(document.querySelectorAll('select'));
+      const fySelect = selects.find((s) => Array.from(s.options).some((o) => (o.textContent || '').includes('All FY')));
+      if (fySelect) {
+        fySelect.value = 'all';
+        fySelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
     // Navigate to Sessions from sidebar.
     await page.evaluate(() => {
       const nav = Array.from(document.querySelectorAll('.nav-item'))
@@ -122,6 +132,7 @@ test.describe('admin shell smoke', () => {
       if (nav) (nav as HTMLElement).click();
     });
     await expect(page.locator('[data-screen-label="Sessions"]')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('.tbl tbody tr button').filter({ hasText: /^Open$/ }).first()).toBeVisible({ timeout: 10_000 });
 
     // Open the first row from Sessions list via its explicit Open action.
     await page.evaluate(() => {
