@@ -23,7 +23,17 @@ const mime = {
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', 'http://localhost');
-    let pathname = decodeURIComponent(url.pathname);
+    let pathname;
+    try {
+      pathname = decodeURIComponent(url.pathname);
+    } catch (e) {
+      // Malformed percent-encoding (e.g. "%E0%") is a client bug, not a
+      // server error — surface it as 400 rather than letting URIError
+      // become a 500.
+      res.writeHead(400);
+      res.end('bad request: malformed url');
+      return;
+    }
     if (pathname === '/' || pathname === '') {
       pathname = '/index.html';
     }

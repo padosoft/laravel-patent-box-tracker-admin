@@ -9,13 +9,10 @@ test.describe('admin shell smoke', () => {
         return;
       }
       const text = msg.text();
-      // Filter benign network 404s (favicon, dev-tools artefacts) so the test
-      // does not become flaky because of resources the static prototype does
-      // not ship.
+      // Only suppress the favicon 404 — the static prototype intentionally
+      // does not ship one. Any other 404 is a real regression (missing JSX
+      // file, missing CSS, missing image) and must surface as a failure.
       if (/favicon\.ico/i.test(text)) {
-        return;
-      }
-      if (/Failed to load resource: the server responded with a status of 404/i.test(text)) {
         return;
       }
       consoleErrors.push(text);
