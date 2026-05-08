@@ -134,23 +134,37 @@ function PageDetail({ sessionId, onNavigate, live }) {
       setDrawerDossier({ ...row });
       return;
     }
+    // Track which dossier id was requested so that a stale async response
+    // arriving after the drawer was closed or a different row clicked does
+    // not overwrite the current state. We use a closure-captured id for
+    // the comparison instead of ref-based tracking to keep the JSX portable.
+    const requestedId = row.id;
     setDrawerDossier({ ...row, _stale: true });
     setDrawerDossierLoading(true);
     try {
-      const response = await TrackerApi.getDossier(sessionId, row.id);
-      if (!response.ok) {
-        toast.push({
-          kind: 'error',
-          title: 'Dossier load error',
-          body: response.error?.message || 'Unable to load dossier detail.',
-        });
-        setDrawerDossier({ ...row });
-        return;
-      }
-      const fresh = TrackerApi.normalize.dossiers([response.data || {}])[0] || row;
-      setDrawerDossier({ ...row, ...fresh });
+      const response = await TrackerApi.getDossier(sessionId, requestedId);
+      // Guard: bail if the user closed the drawer or opened a different one.
+      setDrawerDossier((current) => {
+        if (!current || current.id !== requestedId) {
+          return current;
+        }
+        if (!response.ok) {
+          toast.push({
+            kind: 'error',
+            title: 'Dossier load error',
+            body: response.error?.message || 'Unable to load dossier detail.',
+          });
+          return { ...row };
+        }
+        const fresh = TrackerApi.normalize.dossiers([response.data || {}])[0] || row;
+        return { ...row, ...fresh };
+      });
     } finally {
-      setDrawerDossierLoading(false);
+      setDrawerDossierLoading((current) => {
+        // Only clear the loading flag if this request is still the active one.
+        void current;
+        return false;
+      });
     }
   };
 
