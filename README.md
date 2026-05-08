@@ -169,7 +169,7 @@ The audit screen: session header (status, classifier, period, tax identity, hash
 </p>
 
 <p align="center">
-  <img src="resources/screenshoots/Patent-Box-Admin-Panel-session-detail-commit.png" alt="Commits explorer — phase, AI attribution, R&D qualification, confidence, hash-chain row" width="100%"/>
+  <img src="resources/screenshoots/Patent-Box-Admin-Panel-session-detail-commit.png" alt="Commits explorer — phase, AI attribution, R&amp;D qualification, confidence, hash-chain row" width="100%"/>
 </p>
 
 <p align="center">

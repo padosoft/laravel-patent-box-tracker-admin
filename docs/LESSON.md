@@ -1,5 +1,14 @@
 # LESSON
 
+## 2026-05-08 (Copilot wait discipline)
+
+- **Background monitor (`Monitor` tool) può perdere eventi silenziosamente.** Capitato sul PR #3: il polling ogni 60s ha emesso il transition CI ma ha silenziato la successiva submit di una review Copilot. Effetto: nessuna notifica, l'utente ha dovuto svegliarmi.
+- Mitigazione codificata in `.claude/skills/copilot-pr-review-loop/SKILL.md` e `docs/RULES.md`:
+  - dopo ogni re-request di Copilot, soft cap **15 min** e hard cap **30 min** per il manual cross-check via REST `/pulls/{n}/reviews`;
+  - quando l'utente chiede "che stai facendo / a che punto siamo / aspetti ancora?", trattarlo come trigger forzato di manual check, non rispondere dall'ultimo evento del monitor;
+  - exit condition del monitor deve essere `OR` non `AND` (CI terminale OPPURE Copilot review presente), altrimenti se uno dei due rami non emette si va in deadlock visibile come "still running".
+- Filtro su login bot: usare la stringa esatta `copilot-pull-request-reviewer[bot]` (login GitHub), non euristica `test("[Cc]opilot")` — su questo account il login `Copilot` (semplice) non compare nelle review submitted, solo nei `requested_reviewers`.
+
 ## 2026-05-08 (allineamento upstream + README WOW)
 
 - Quando il package upstream taglia una stable (`v1.0.0`/`v1.0.1`), il primo passo è confrontare `routes/api.php` upstream con `project/api-client.jsx`: se gli endpoint coincidono e l'error taxonomy è congelata, l'admin non richiede modifica funzionale, solo documentale.
