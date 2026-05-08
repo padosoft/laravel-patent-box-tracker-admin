@@ -13,10 +13,14 @@
   - `chatgpt-codex-connector[bot]` — un P1 sul lockfile mancante, risolto in `7fb49f6` e ack-ato sul thread.
   - `copilot-pull-request-reviewer[bot]` — 7 giri di review, 22 commenti totali applicati. La 7ª review è arrivata con zero commenti inline e body `"generated no new comments"`.
 - **PR #3 merged** in `b77e8ed` (squash + branch eliminato) con stato `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
-- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`:
-  - se i gate locali passano, tutti i check CI sono `pass`, la PR risulta `MERGEABLE` + `CLEAN` e Copilot è in stato `APPROVED` (oppure ha zero commenti inline AND il body contiene il sentinel "no new comments"), il merge parte automaticamente senza chiedere conferma;
-  - i bypass sono enumerati esplicitamente: PR che toccano segreti/infra/azioni distruttive, richieste esplicite di attendere da parte dell'utente, base diversa da `main`;
-  - resta obbligatorio annotare il commit di merge in `docs/PROGRESS.md` per mantenere l'audit trail.
+- **Nuova regola di auto-merge** consolidata in `CLAUDE.md`, `docs/RULES.md` e `.claude/skills/copilot-pr-review-loop/SKILL.md`. La definizione canonica richiede che TUTTE e cinque le condizioni siano soddisfatte simultaneamente, prima che il merge parta automaticamente senza chiedere conferma:
+  1. i gate locali passano sull'HEAD corrente;
+  2. ogni check CI riporta `pass` sull'HEAD corrente;
+  3. l'ultima review Copilot filtrata per login (`copilot-pull-request-reviewer[bot]`) + `commit_id == headRefOid` + state whitelist (`APPROVED` o `COMMENTED`, mai `PENDING`, mai `DISMISSED`) è in stato `APPROVED` oppure ha zero commenti inline AND body contenente il sentinel "no new comments";
+  4. la PR è `mergeable=MERGEABLE` + `mergeStateStatus=CLEAN`;
+  5. zero review thread con `isResolved=false AND isOutdated=false` (i thread indirizzati da fix commit vanno risolti programmaticamente via GraphQL `resolveReviewThread` come step 4 del Closing the loop).
+- I bypass sono enumerati esplicitamente in `docs/RULES.md`: PR che toccano segreti/infra/azioni distruttive, richieste esplicite di attendere da parte dell'utente, base diversa da `main`.
+- Resta obbligatorio annotare il commit di merge in `docs/PROGRESS.md` per mantenere l'audit trail.
 
 ## 2026-05-08 (sync con package v1.0.1 + README WOW)
 
