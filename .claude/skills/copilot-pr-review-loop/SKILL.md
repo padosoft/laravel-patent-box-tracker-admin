@@ -159,10 +159,35 @@ A bare `COPILOT_COMMENTS=0` is **not** sufficient — Copilot can submit a `COMM
 
 ## Auto-merge command (default path)
 
-Run this only after the convergence checks above have all passed — including the explicit body/approval signal, not just `COPILOT_COMMENTS == 0`. Treat the merge command as the final action of the convergence detector, not a shortcut.
+Run this only after the convergence checks above have all passed — including the explicit body/approval signal, not just `COPILOT_COMMENTS == 0`. Treat the merge command as the final action of the convergence detector, not a shortcut. The snippet below is self-contained: it computes every gate variable from `gh` so it can be copy-pasted as-is, with `$PR`, `$REPO`, and the local-gate command as the only inputs from the caller.
 
 ```bash
-# Final guard before merge — re-evaluate every condition as one expression.
+# Inputs: $PR, $REPO. Replace `node scripts/structure-check.mjs` with the
+# repo's local gate command (e.g. composer test, npm run test, ...).
+PR=<n>; REPO=<owner/repo>
+
+# 1. Local gates
+if node scripts/structure-check.mjs >/dev/null 2>&1; then
+  LOCAL_GATES_OK=1
+else
+  LOCAL_GATES_OK=0
+fi
+
+# 2. CI rollup — every entry must be COMPLETED + SUCCESS, and the array
+#    must be non-empty (a PR with zero checks must not satisfy the gate).
+CI_ALL_PASS=$(gh pr view "$PR" --repo "$REPO" --json statusCheckRollup \
+  --jq '(.statusCheckRollup | length > 0)
+        and ([.statusCheckRollup[] | (.status=="COMPLETED" and .conclusion=="SUCCESS")] | all)' \
+  | grep -q '^true$' && echo 1 || echo 0)
+
+# 3. Mergeability (GraphQL via `gh pr view --json`)
+MERGEABLE=$(gh pr view "$PR" --repo "$REPO" --json mergeable --jq '.mergeable')
+MERGE_STATE=$(gh pr view "$PR" --repo "$REPO" --json mergeStateStatus --jq '.mergeStateStatus')
+
+# 4. Copilot signal — re-uses the variables populated by the Detection
+#    query above. Re-run that block first if any time has passed.
+
+# Final guard — re-evaluate every condition as one expression.
 if [ "$LOCAL_GATES_OK" = "1" ] \
    && [ "$CI_ALL_PASS" = "1" ] \
    && [ "$MERGEABLE" = "MERGEABLE" ] \
@@ -174,6 +199,8 @@ if [ "$LOCAL_GATES_OK" = "1" ] \
     --body "<one-paragraph summary + 'Review trail: N rounds, M comments, final 0/CLEAN'>"
 else
   echo "[gate] convergence not reached — do not merge"
+  printf '  LOCAL_GATES_OK=%s\n  CI_ALL_PASS=%s\n  MERGEABLE=%s\n  MERGE_STATE=%s\n  COPILOT_STATE=%s\n  COPILOT_COMMENTS=%s\n' \
+    "$LOCAL_GATES_OK" "$CI_ALL_PASS" "$MERGEABLE" "$MERGE_STATE" "$COPILOT_STATE" "$COPILOT_COMMENTS"
 fi
 ```
 
