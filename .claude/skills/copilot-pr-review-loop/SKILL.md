@@ -127,10 +127,26 @@ If you arm a background monitor:
        THREAD_IDS=""
        break
      fi
+     # Same fail-closed pattern as the convergence gate: capture exit code,
+     # validate response shape, abort on any failure rather than silently
+     # ending up with an empty THREAD_IDS that would no-op the resolve step.
      if [ -z "$RESOLVE_CURSOR" ]; then
        PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -f query="$RESOLVE_QUERY")
+       GH_STATUS=$?
      else
        PAGE_JSON=$(gh api graphql -F owner="${REPO%/*}" -F repo="${REPO#*/}" -F pr="$PR" -F cursor="$RESOLVE_CURSOR" -f query="$RESOLVE_QUERY")
+       GH_STATUS=$?
+     fi
+     if [ "$GH_STATUS" -ne 0 ] || [ -z "$PAGE_JSON" ]; then
+       echo "[abort] reviewThreads fetch failed (status=$GH_STATUS) — auth/transport error" >&2
+       exit 1
+     fi
+     PAGE_NODES_OK=$(echo "$PAGE_JSON" | jq -r '
+       if (.data.repository.pullRequest.reviewThreads.nodes // null) == null
+       then "no" else "yes" end')
+     if [ "$PAGE_NODES_OK" != "yes" ]; then
+       echo "[abort] reviewThreads response shape unexpected — not no-opping the resolve step" >&2
+       exit 1
      fi
      PAGE_IDS=$(echo "$PAGE_JSON" | jq -r '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved==false and .isOutdated==false) | .id')
      if [ -n "$PAGE_IDS" ]; then
