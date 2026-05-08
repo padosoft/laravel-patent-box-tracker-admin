@@ -2,6 +2,19 @@
 
 > **Convention pin (2026-05-08):** in this file we use the English term **`merged`** for git/PR merge events (e.g. "PR #N merged in `<sha>`"), even inside Italian-language entries. Both Italian Anglicisms `mergeata` and `mergiata` are nonstandard tech-Italian and triggered repeated review nits across PR #4 — `merged` is the term GitHub itself emits (`state=="MERGED"`, `merged_at`, `mergeable_state`) and ends the bikeshed. Treat `merged` as a code-switched technical noun, like `commit` or `branch`.
 
+## 2026-05-09 (Macro 7.4 completion + admin release v1.0.0)
+
+- **Composer install path landed**:
+  - added `composer.json` for package distribution (`padosoft/laravel-patent-box-tracker-admin`);
+  - added `src/PatentBoxTrackerAdminServiceProvider.php` with publish tag `patent-box-admin-assets`;
+  - host install flow finalized: `composer require ...` + `php artisan vendor:publish --tag=patent-box-admin-assets` → assets in `public/vendor/patent-box-admin`.
+- **Release docs finalized**:
+  - `README.md` updated from planned Composer path to active Composer path;
+  - `CHANGELOG.md` updated with release section `1.0.0` (2026-05-09);
+  - `docs/ENTERPRISE_PLAN.md` Macro 7 moved from 🟡 to ✅.
+- **Tag milestone**:
+  - admin release target closed as `v1.0.0` with Macro 0–7 all completed.
+
 ## 2026-05-08 (PR #4 merged + Macro 6.4 polish in PR #5)
 
 - **PR #4 merged** in `fd0246d` (squash + delete-branch) dopo 19 giri di review Copilot. La regola di auto-merge è ora policy attiva (CLAUDE.md / docs/RULES.md / .claude/skills/copilot-pr-review-loop/SKILL.md): cinque condizioni di convergenza (local gates / CI / Copilot quiet on HEAD con full filter / mergeable+CLEAN / zero unresolved threads).

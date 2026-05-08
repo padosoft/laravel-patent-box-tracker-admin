@@ -346,18 +346,18 @@ Se ci sono blocchi remoti persistenti, il subtask resta aperto con blocker espli
 | 4 | Security and data access hardening (package repo) | ✅ Done upstream — token gate + rate limiter + scoped download in `v1.0.0` / patched in `v1.0.1` |
 | 5 | Admin API client foundation (admin repo) | ✅ Done — `project/api-client.jsx` covers full v1 surface, error alias, bearer support |
 | 6 | Admin UX + design implementation (admin repo) | ✅ Done — 6.1–6.3 via PR #1/#2; 6.4a integrity-check button + 6.4b dossier detail drawer shipped via `task-admin-integrity-and-dossier-detail` (PR #5) |
-| 7 | Contracts, docs, release, tag (admin repo) | 🟡 README ✅ (PR #3), CI baseline ✅ (PR #3), auto-merge convergence rule ✅ (PR #4), Macro 6 polish ✅ (PR #5). Remaining: Composer install path + `v1.0.0` tag |
+| 7 | Contracts, docs, release, tag (admin repo) | ✅ Done — Composer install path landed + admin tag `v1.0.0` |
 
 ### Macro 6 polish gaps — RESOLVED in PR #5
 
 - **6.4a** integrity check action: `TrackerApi.verifySessionIntegrity` now bound to the **Verify integrity** button on the session detail page-head. Result toast + persistent badge under the page header showing `verified ✓ head … N commits` or `first_failure at row N`.
 - **6.4b** dossier detail drawer: `TrackerApi.getDossier` consumed by the new `DossierDrawer` component. Click any row in the Dossiers tab → opens a side drawer with format/locale, full SHA-256 (copy-to-clipboard), byte size, generated_at, server-side path, parent session id, and a one-click download.
 
-### Macro 7 outstanding
+### Macro 7 closure
 
-- 7.1 contract suite frontend: ✅ baseline shipped in PR #3 (structure-check + Playwright smoke). Wider per-workflow Playwright coverage is still nice-to-have but not blocking.
-- 7.2 README wow rewrite: ✅ PR #3.
-- 7.3 lessons/skills consolidation: ✅ PR #3 + PR #4 (auto-merge convergence rule, head-SHA anchoring, state-whitelist, unresolved-threads gate, Italian/English bikeshed pinned to `merged`).
-- 7.4 tag/release: Composer install path + `v1.0.0` admin tag remain. The host-mounting Composer scaffold is the only material item left; after it lands the tag can be cut.
+- 7.1 contract suite frontend: ✅ baseline shipped in PR #3 (structure-check + Playwright smoke).
+- 7.2 README wow rewrite: ✅ PR #3, then finalized in `v1.0.0`.
+- 7.3 lessons/skills consolidation: ✅ PR #3 + PR #4.
+- 7.4 release: ✅ Composer install path (`composer.json` + service provider + `vendor:publish --tag=patent-box-admin-assets`) + tag `v1.0.0`.
 
 
