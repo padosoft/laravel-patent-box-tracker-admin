@@ -110,7 +110,7 @@ The loop is converged — and you MUST merge automatically — when ALL four of 
 
 1. **Local gates green** — the gates declared in this repo (e.g. `node scripts/structure-check.mjs`, `composer test`, `npm run e2e`) pass when run against the latest pushed commit.
 2. **CI green** — every check in `gh pr checks <PR>` is `pass`/`SUCCESS`. No `pending`, no `failure`, no required-but-skipped.
-3. **Copilot quiet** — the latest Copilot review has **0 inline review comments** AND its review body indicates no new comments (e.g. `"generated no new comments"`), OR Copilot has explicitly approved.
+3. **Copilot quiet — for the current head commit only** — the latest Copilot review whose `commit_id == headRefOid` AND whose `state` is `APPROVED` or `COMMENTED` (never `PENDING`, never `DISMISSED`) has **0 inline review comments** AND its review body indicates no new comments (e.g. `"generated no new comments"`), OR that head-anchored review state is `APPROVED`. A Copilot review submitted against an older commit MUST be ignored, even if it is the most recent one returned by the API.
 4. **PR mergeable** — `gh pr view <PR> --json mergeable,mergeStateStatus` returns `mergeable=MERGEABLE` and `mergeStateStatus=CLEAN`.
 
 Detection query:
@@ -258,14 +258,14 @@ After the merge:
 
 ## When NOT to auto-merge (bypass conditions)
 
-Auto-merge is the default. Bypass it (and ask the user) only when:
+Auto-merge is the default. The canonical bypass list lives in [`docs/RULES.md` "Auto-merge convergence rule (preferred path)" → "Do NOT auto-merge if"](../../../docs/RULES.md). Read that list and treat it as the single source of truth — do not maintain a duplicate enumeration here. The list covers, at minimum:
 
-- Any earlier review still has an **unresolved actionable** comment (resolution-map reply not posted, or comment marked unresolved by reviewer).
-- The PR touches secrets, credentials, infrastructure, deletions of historical commits, or anything that changes external systems beyond the repo (deploys, cron jobs, third-party API keys).
-- The user has said `"wait"`, `"do not merge"`, `"stop"`, `"hold off"`, or any equivalent **anywhere in the active conversation since the PR opened**.
-- The PR base is not `main` (release branches and stacked PR chains still require explicit user confirmation per the macro/subtask rules).
+- unresolved actionable comments from any prior review;
+- PRs that touch secrets, credentials, infrastructure, destructive history operations, or external systems beyond the repo;
+- explicit user instructions to halt (`"wait"`, `"stop"`, `"hold off"`, `"pause"`, `"do not merge"`, `"don't merge"`, or any clear synonym in the active conversation since the PR opened);
+- a base branch that is not `main`.
 
-When you bypass auto-merge, log the bypass reason in `docs/PROGRESS.md` (one line, including PR number and reason) so the audit trail is intact.
+When you bypass auto-merge for any of those reasons, log the bypass reason in `docs/PROGRESS.md` (one line, including PR number and the specific bypass that fired) so the audit trail is intact.
 
 ## Common failures observed
 

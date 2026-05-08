@@ -67,12 +67,12 @@ gh pr edit <PR> --add-reviewer @copilot
 
 When all four are met, run the squash merge with `--delete-branch`, log the merge SHA in `docs/PROGRESS.md`, and proceed to the next macro/subtask without pausing for human authorisation.
 
-**Do NOT auto-merge if:**
+**Do NOT auto-merge if any of the following hold (canonical bypass list — `.claude/skills/copilot-pr-review-loop/SKILL.md` defers to this list):**
 
-- Any prior review still has unresolved actionable comments.
-- The PR touches secrets, credentials, infrastructure, deletions of historical commits, or anything that changes shared external systems beyond the repo itself.
-- The user has explicitly said "wait" or "do not merge" anywhere in the active conversation.
-- The branch base is not `main` (release branches still require explicit confirmation).
+- Any prior review still has unresolved actionable comments (resolution-map reply not posted, or comment marked unresolved by the reviewer).
+- The PR touches secrets, credentials, infrastructure, deletions of historical commits, or anything that changes shared external systems beyond the repo itself (deploys, cron jobs, third-party API keys).
+- The user has said any of the following — or a clear synonym — anywhere in the active conversation since the PR opened: `"wait"`, `"do not merge"`, `"don't merge"`, `"stop"`, `"hold off"`, `"pause"`, or an equivalent imperative to halt the loop.
+- The branch base is not `main` (release branches and stacked PR chains still require explicit user confirmation per the macro/subtask rules).
 
 When the rule applies but you bypass it for any of the above reasons, log the bypass reason in `docs/PROGRESS.md` so the audit trail is intact.
 
