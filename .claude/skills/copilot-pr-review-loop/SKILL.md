@@ -89,7 +89,8 @@ The Copilot login on this account is **`copilot-pull-request-reviewer[bot]`**. F
 
 If you arm a background monitor:
 
-- Its exit condition must be **"CI terminal OR Copilot submitted (whichever comes second)"**, not AND. AND can deadlock if one side fails to update the captured variable.
+- Prefer **`Bash` with `run_in_background`** over `Monitor` for a one-shot "tell me when Copilot reviewed" wait. The `until <copilot-submitted>; do sleep 60; done` pattern emits exactly one completion notification on exit and cannot deadlock on a missed transition.
+- If you do use `Monitor`, exit on **the single signal you actually need** (Copilot review submitted), and watch CI separately on demand. Compound `AND` exit conditions can stall when one side fails to update the captured variable.
 - Always emit a heartbeat line every N polls so a stalled monitor is visible (e.g. `[heartbeat] no events; ci=$ci_state; cop_after=$cop_after`).
 - Echo `cop_after` and `ci_state` on every iteration so you can grep the monitor's output file for the missed transition after the fact.
 - Do not rely on the monitor for the only notification of a Copilot review. Cross-check at the cap timings above.
