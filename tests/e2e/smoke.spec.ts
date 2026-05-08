@@ -131,12 +131,16 @@ test.describe('admin shell smoke', () => {
 
     // Open the first session. force:true bypasses any palette overlay that
     // Chromium headless may render in front of the table rows.
+    // NOTE: do NOT use waitForLoadState('networkidle') after a SPA navigation
+    // because the client-side state update is synchronous and the network is
+    // already idle (API disabled) — the wait resolves before React re-renders.
+    // Instead we wait for a detail-page-only element as the render signal.
     await page.locator('.tbl tbody tr').first().click({ force: true });
-    await page.waitForLoadState('networkidle');
 
-    // The Verify integrity button must be visible on the detail page.
-    const verifyBtn = page.getByRole('button', { name: /verify integrity/i });
-    await expect(verifyBtn).toBeVisible({ timeout: 10_000 });
+    // The Verify integrity button must become visible — this also serves as
+    // the wait for the detail page to finish rendering.
+    const verifyBtn = page.locator('button').filter({ hasText: /verify integrity/i });
+    await expect(verifyBtn).toBeVisible({ timeout: 15_000 });
 
     // Click — with API disabled the button shows an error toast but must
     // not crash (captured in consoleErrors and asserted at the end).
