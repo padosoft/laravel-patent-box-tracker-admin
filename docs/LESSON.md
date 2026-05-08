@@ -1,5 +1,10 @@
 # LESSON
 
+## 2026-05-08
+
+- In assenza di scaffold Laravel/React preesistente nell’admin repo, la baseline UI può essere resa disponibile copiando l’intero set `project/` dal design di riferimento (HTML + JSX + CSS) e mantenendo l’evoluzione a step successivi verso integrazione Laravel/SWR/API client.
+- Registrare nel `docs/PROGRESS.md` la consegna della baseline anche senza build/test automatici quando l’ambiente backend non fornisce runtime completo.
+
 ## 2026-05-07
 
 - I documenti operativi devono essere allineati subito in tutte le entry (`AGENTS`, `CLAUDE`, `agent.md`, `agents.md`, skills, rules, progress, lesson) prima di partire con codice.
