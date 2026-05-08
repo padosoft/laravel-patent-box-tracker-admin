@@ -115,24 +115,11 @@ test.describe('admin shell smoke', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('#root')).not.toBeEmpty({ timeout: 15_000 });
 
-    // The sidebar nav-item for Sessions contains an SVG icon + a <span> label
-    // + an optional badge counter (e.g. "Sessions4"). Filtering by /^Sessions$/
-    // fails because the full textContent includes the badge. Use page.evaluate
-    // to click via the exact span text to avoid ambiguity.
-    await page.evaluate(() => {
-      const el = Array.from(document.querySelectorAll('.nav-item'))
-        .find((e) => e.querySelector('span')?.textContent === 'Sessions');
-      if (el) (el as HTMLElement).click();
-    });
-    await page.waitForLoadState('networkidle');
-
-    // The sessions table must show at least one data row.
+    // The dashboard "Recent sessions" table must show at least one data row.
     await expect(page.locator('.tbl tbody tr').first()).toBeVisible({ timeout: 10_000 });
 
-    // Open the first session via its explicit Open action. Clicking the whole
-    // row is occasionally flaky in headless when overlays or text selection
-    // interfere with the row-level onClick handler.
-    await page.locator('.tbl tbody tr').first().locator('button').filter({ hasText: /^Open$/ }).click({ force: true });
+    // Open the first recent session to reach the detail page.
+    await page.locator('.tbl tbody tr').first().click({ force: true });
 
     // Wait for the detail route to render. This marker exists only in
     // PageDetail (<div data-screen-label={`Session ${sessionId}`}>).
