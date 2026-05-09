@@ -1,6 +1,6 @@
 ---
 name: copilot-pr-review-loop
-description: Mandatory loop after each push/PR. Request Copilot, verify it landed, watch for the review with a cap, never assume the monitor caught it.
+description: Use after every push or PR open in laravel-patent-box-tracker-admin (and the upstream tracker repo). Requests Copilot reviewer, verifies attachment via REST `requested_reviewers`, polls reviews with soft (15min) and hard (30min) caps, and runs the five-condition convergence gate (local gates + CI green + Copilot quiet on HEAD + mergeable+CLEAN + zero unresolved threads) to auto-merge with `--squash --delete-branch` without pausing for authorization. Includes GraphQL fallback for review request, `resolveReviewThread` helper, and the canonical bypass list.
 ---
 
 # Copilot PR Review + CI Loop

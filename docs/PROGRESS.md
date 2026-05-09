@@ -2,6 +2,22 @@
 
 > **Convention pin (2026-05-08):** in this file we use the English term **`merged`** for git/PR merge events (e.g. "PR #N merged in `<sha>`"), even inside Italian-language entries. Both Italian Anglicisms `mergeata` and `mergiata` are nonstandard tech-Italian and triggered repeated review nits across PR #4 — `merged` is the term GitHub itself emits (`state=="MERGED"`, `merged_at`, `mergeable_state`) and ends the bikeshed. Treat `merged` as a code-switched technical noun, like `commit` or `branch`.
 
+## 2026-05-09 (release v1.0.1 — README polish + skill format alignment, direct push)
+
+- **Scope:** community polish slice on top of `v1.0.0`. No runtime code changes.
+- **README** allineato allo stato reale post-Macro 6.4 + 7.4:
+  - tabella v1 endpoint surface — rimossa l'annotazione "(drawer planned)" su `GET /v1/tracking-sessions/{id}/dossiers/{dossier}`, perché il `DossierDrawer` è live dal merge di PR #5 (`f9c46ef`);
+  - sezioni Settings / Configuration reference / Security model — riformulate da "tracked for the Macro 6 polish slice" a neutro "v1.x follow-up", così non ci sono riferimenti a slice già chiuse;
+  - Testing — rimosso il forward-reference a "Macro 7 release slice" (Macro 7 chiuso); il broader Playwright coverage è ora descritto come v1.x follow-up;
+  - Roadmap — bump del milestone snapshot a `v1.0.1` con post-1.0 backlog esplicitato (settings form, URL cleanup, Playwright per workflow);
+  - badge row — aggiunto badge "Admin release v1.0.1 stable" linkato alla pagina releases.
+- **Skill format Claude-friendly:**
+  - `.claude/skills/patent-box-admin-enterprise/SKILL.md` — riscritta la `description` YAML in stile "Use when…" e aggiunta sezione "When to use" con i trigger espliciti (mod su `project/`, doc edits, PR/release).
+  - `.claude/skills/copilot-pr-review-loop/SKILL.md` — riscritta la `description` YAML per descrivere esattamente il loop (request → REST verify → poll con cap 15min/30min → 5-condition convergence gate → auto-merge `--squash --delete-branch`).
+- **CHANGELOG** — sezione `[1.0.1]` aggiunta con il dettaglio sopra; sezione `[1.0.0]` consolidata (tutti gli `Added` precedenti spostati lì); `[Unreleased]` svuotata.
+- **Direct push to `main` autorizzato dall'utente** (eccezione esplicita al macro/subtask flow per release polish doc-only). Tag `v1.0.1` + GitHub release creati post-push.
+- **Gates locali** eseguiti su HEAD pre-push: `node scripts/structure-check.mjs`. Niente test backend (no PHP runtime change).
+
 ## 2026-05-09 (Macro 7.4 completion + admin release v1.0.0)
 
 - **Composer install path landed**:

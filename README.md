@@ -8,6 +8,7 @@
 <p align="center">
   <a href="https://github.com/padosoft/laravel-patent-box-tracker"><img alt="Companion of laravel-patent-box-tracker" src="https://img.shields.io/badge/companion%20of-laravel--patent--box--tracker-0ea5e9"></a>
   <a href="https://github.com/padosoft/laravel-patent-box-tracker/releases/latest"><img alt="Tracker stable" src="https://img.shields.io/badge/tracker-v1.0.1%20stable-2ea44f"></a>
+  <a href="https://github.com/padosoft/laravel-patent-box-tracker-admin/releases/latest"><img alt="Admin release" src="https://img.shields.io/badge/admin-v1.0.1%20stable-2ea44f"></a>
   <img alt="HTTP API contract" src="https://img.shields.io/badge/API-v1%20stable-2ea44f">
   <img alt="React" src="https://img.shields.io/badge/React-18.3-61dafb">
   <img alt="Laravel" src="https://img.shields.io/badge/laravel-12%20%7C%2013-FF2D20">
@@ -202,7 +203,7 @@ API health badge (`GET /v1/health`), capabilities readout (`GET /v1/capabilities
 
 ### Settings
 
-Runtime panel configuration: tracker base URL, optional bearer token, request timeout, enable/disable flag. The current static baseline reads its config from `localStorage` (key `__PB_ADMIN_API_CONFIG__`) when present, so persistence is currently driven externally — either by setting the key manually from the browser devtools, or by a future settings form (planned in Macro 6 polish; tracked in `docs/ENTERPRISE_PLAN.md`).
+Runtime panel configuration: tracker base URL, optional bearer token, request timeout, enable/disable flag. The current static baseline reads its config from `localStorage` (key `__PB_ADMIN_API_CONFIG__`) when present, so persistence is currently driven externally — either by setting the key manually from the browser devtools, or by query-string bootstrap. An interactive settings form is a v1.x follow-up tracked in `docs/ENTERPRISE_PLAN.md`.
 
 <p align="center">
   <img src="resources/screenshoots/Patent-Box-Admin-Panel-settings.png" alt="Settings — tracker base URL, bearer token, timeout, enable flag" width="100%"/>
@@ -292,7 +293,7 @@ The admin reads its runtime config from these sources, with the actual resolutio
 
 1. **Built-in defaults** — `baseUrl=/api/patent-box`, `timeoutMs=30000`, `enabled=true`. The seed values used when nothing else is provided.
 2. **Query string** — `?apiBase=…`, `?apiToken=…`, `?apiTimeout=30000`, `?apiEnabled=0|1`. Parsed on every navigation but **never written back**: tokens placed in the URL stay visible in the address bar, browser history and `Referer` headers, so prefer the storage path below for anything sensitive.
-3. **`localStorage`** (highest precedence for `baseUrl`, `token`, `enabled`) — key `__PB_ADMIN_API_CONFIG__`, JSON `{baseUrl, token, enabled}`. When this key is present, its values **override** anything passed via the query string for those three fields. `apiTimeout` is currently not loaded from storage and always uses the query-string value or the built-in default. The static baseline only **reads** the storage key — populate it manually from devtools, e.g. `localStorage.setItem('__PB_ADMIN_API_CONFIG__', JSON.stringify({baseUrl: '…', token: '…', enabled: true}))`. A settings form that writes the key is tracked for the Macro 6 polish slice in `docs/ENTERPRISE_PLAN.md`.
+3. **`localStorage`** (highest precedence for `baseUrl`, `token`, `enabled`) — key `__PB_ADMIN_API_CONFIG__`, JSON `{baseUrl, token, enabled}`. When this key is present, its values **override** anything passed via the query string for those three fields. `apiTimeout` is currently not loaded from storage and always uses the query-string value or the built-in default. The static baseline only **reads** the storage key — populate it manually from devtools, e.g. `localStorage.setItem('__PB_ADMIN_API_CONFIG__', JSON.stringify({baseUrl: '…', token: '…', enabled: true}))`. An in-panel settings form that writes the key is a v1.x follow-up.
 
 **Practical implication:** if you pass `?apiToken=…&apiBase=…` to bootstrap a fresh browser session, those values are picked up. As soon as the storage key exists, however, the storage values win — so an existing token in `localStorage` will be used even if a new one is provided in the URL. Clear the storage key (`localStorage.removeItem('__PB_ADMIN_API_CONFIG__')`) before re-bootstrapping with new URL params.
 
@@ -358,7 +359,7 @@ The admin only talks to the public, versioned, frozen v1 surface of the tracker.
 | `GET` | `/v1/tracking-sessions/{id}/evidence` | Evidence explorer |
 | `GET` | `/v1/tracking-sessions/{id}/dossiers` | Dossiers tab |
 | `POST` | `/v1/tracking-sessions/{id}/dossiers` | Render trigger |
-| `GET` | `/v1/tracking-sessions/{id}/dossiers/{dossier}` | Dossier detail (drawer planned) |
+| `GET` | `/v1/tracking-sessions/{id}/dossiers/{dossier}` | Dossier detail drawer |
 | `GET` | `/v1/tracking-sessions/{id}/dossiers/{dossier}/download` | Download link |
 | `GET` | `/v1/tracking-sessions/{id}/integrity` | Verify-integrity button |
 
@@ -367,7 +368,7 @@ The admin only talks to the public, versioned, frozen v1 surface of the tracker.
 ## Security model
 
 - **No business logic on the client.** Authorisation, ownership checks, path-traversal hardening and rate limiting are enforced by the tracker. The admin only displays errors.
-- **Prefer `localStorage` over URL params for the bearer token.** The static baseline reads `apiToken` from the query string when present, but does **not** rewrite the URL — tokens passed via `?apiToken=…` stay visible in the address bar, browser history and outgoing `Referer` headers. For anything beyond a one-shot demo, set the token straight into `localStorage` under `__PB_ADMIN_API_CONFIG__` (devtools console: `localStorage.setItem('__PB_ADMIN_API_CONFIG__', JSON.stringify({baseUrl: '…', token: '…', enabled: true}))`). URL cleanup + a settings form are tracked for the Macro 6 polish slice.
+- **Prefer `localStorage` over URL params for the bearer token.** The static baseline reads `apiToken` from the query string when present, but does **not** rewrite the URL — tokens passed via `?apiToken=…` stay visible in the address bar, browser history and outgoing `Referer` headers. For anything beyond a one-shot demo, set the token straight into `localStorage` under `__PB_ADMIN_API_CONFIG__` (devtools console: `localStorage.setItem('__PB_ADMIN_API_CONFIG__', JSON.stringify({baseUrl: '…', token: '…', enabled: true}))`). URL-cleanup and an in-panel settings form are v1.x follow-ups.
 - **Session-scoped downloads.** Dossier downloads always go through `…/tracking-sessions/{id}/dossiers/{dossierId}/download`, which is ownership-checked server-side. The admin never builds direct filesystem URLs.
 - **Strict envelope.** A non-`{data|error}` response is treated as a transport failure, not user-actionable success.
 - **No secrets in the repo.** Provider keys (`REGOLO_API_KEY`, `OPENAI_API_KEY`, …) live exclusively in the tracker's `.env`.
@@ -426,7 +427,7 @@ laravel-patent-box-tracker-admin/
 The current baseline is a static prototype, so the gate matrix is conservative:
 
 - **Backend regression on the tracker** (run in the tracker repo): `composer validate --strict --no-check-publish` + `composer test`.
-- **Frontend regression on the admin** (baseline in place; expand coverage in Macro 7): `npm run test` (structure check), `npm run build` (alias for the same gate today), `npm run e2e` (Playwright smoke). The `.github/workflows/ci.yml` workflow runs the structure check + the Chromium smoke on every push to `main` and every PR. Wider coverage — one Playwright scenario per operator workflow — is tracked for the Macro 7 release slice.
+- **Frontend regression on the admin**: `npm run test` (structure check), `npm run build` (alias for the same gate today), `npm run e2e` (Playwright smoke). The `.github/workflows/ci.yml` workflow runs the structure check + the Chromium smoke on every push to `main` and every PR. Wider coverage — one Playwright scenario per operator workflow — is a v1.x follow-up.
 - **Manual smoke** (today): open the panel, run the dry-run → launch → poll → render → download → verify-integrity sequence end-to-end against a local tracker.
 
 Test status, blockers, and CI gaps are tracked in [`docs/PROGRESS.md`](docs/PROGRESS.md) and the completion table in [`docs/ENTERPRISE_PLAN.md`](docs/ENTERPRISE_PLAN.md).
@@ -445,9 +446,15 @@ The macro/subtask plan is in [`docs/ENTERPRISE_PLAN.md`](docs/ENTERPRISE_PLAN.md
 
 Current milestone:
 
-1. Macro 0–7 completed.
-2. Admin `v1.0.0` released with Composer install path (`vendor:publish --tag=patent-box-admin-assets`).
+1. Macro 0–7 completed (operating system, API foundation upstream, admin API client, admin UX, integrity-button + dossier-drawer polish, contracts/release).
+2. Admin `v1.0.1` released — community README polish, vibe-coding pack format aligned to the Claude skill conventions, full v1 endpoint surface live in `project/api-client.jsx`, Composer install path (`vendor:publish --tag=patent-box-admin-assets`).
 3. Tracker compatibility floor remains `>= v1.0.1`.
+
+Post-1.0 backlog (tracked in `docs/ENTERPRISE_PLAN.md`):
+
+- in-panel settings form that writes `__PB_ADMIN_API_CONFIG__`;
+- URL-cleanup of `?apiToken=…` after successful bootstrap;
+- one Playwright scenario per operator workflow (commits explorer, evidence drilldown, dossier render + verify-integrity).
 
 ## Contributing
 

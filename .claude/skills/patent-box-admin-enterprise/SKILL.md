@@ -1,14 +1,20 @@
 ---
 name: patent-box-admin-enterprise
-description: Plan and execute Laravel Patent Box admin companion work using macro/subtask PRs, mandatory Copilot loop, and progress/lesson discipline.
+description: Use when working in laravel-patent-box-tracker-admin — planning admin features, slicing macro/subtask work, editing project/*.jsx, api-client.jsx, docs/*, or preparing a release. Enforces macro/subtask branch model, mandatory Copilot review loop, v1 HTTP API contract pin to padosoft/laravel-patent-box-tracker, and the read-order for PROGRESS / ENTERPRISE_PLAN / RULES / LESSON before any code change.
 ---
 
 # Patent Box Admin Enterprise Skill
 
-## Use for
+## When to use
 
-- First step in this admin repo before any implementation change.
-- Planning, task slicing, and release preparation for admin + API client UX.
+Trigger this skill any time you are about to:
+
+- modify code under `project/` (UI, API client, fixtures);
+- modify `docs/PROGRESS.md`, `docs/ENTERPRISE_PLAN.md`, `docs/RULES.md`, `docs/LESSON.md`;
+- open a PR, request Copilot review, or run the convergence/auto-merge flow;
+- prepare or tag a release of the admin package.
+
+If the task is purely a read-only question with no file write, no PR, and no release action, you can answer without invoking the full workflow — but you still MUST honor the upstream contract section below when describing API behavior.
 
 ## First Step in Any Session
 
